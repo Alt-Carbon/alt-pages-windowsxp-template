@@ -2,7 +2,7 @@
 
 A personal website as a Windows XP desktop. Your pages are icons on a soft blue gradient; each opens in a Luna window you can drag, resize and minimise. about.txt opens in Notepad when someone arrives, Writing is a journal, Reading is your Goodreads bookshelf, and the Start menu, Run…, Display Properties, balloon tips, the boot screen and Turn Off Computer are all there. Built with Astro, edited with Sveltia CMS at `/admin`, hosted as a Cloudflare Worker. MIT licensed.
 
-It is the Desktop template (`alt-pages-desktop-template`) in different clothes: the same content files, the same windows, journal, shelf and Worker, with the look redrawn as XP's Luna. Nothing in it is Microsoft's: the icons in `public/icons` are our own drawings, the wallpapers are painted on a canvas from a seed, and the fonts are the system's. Not affiliated with Microsoft.
+It is the Desktop template (`alt-pages-desktop-template`) in different clothes: the same content files, the same windows, journal, shelf and Worker, with the look redrawn as XP's Luna. Nothing in it is Microsoft's: the icons in `public/icons` are our own drawings, the wallpapers are painted on a canvas from a seed, and the fonts are the system's. Windows and Windows XP are trademarks of Microsoft Corporation; this project is not affiliated with or endorsed by Microsoft.
 
 ## Run it locally
 

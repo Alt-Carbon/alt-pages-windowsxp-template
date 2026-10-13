@@ -18,12 +18,12 @@ function write(path, content) {
 const site = JSON.parse(readFileSync("content/site.json", "utf8"));
 const reading = JSON.parse(readFileSync("content/reading.json", "utf8"));
 
-// Until a Goodreads profile is set, the Reading page shows a sample shelf (Adithya's, Goodreads user 19054312).
+// Until a Goodreads profile is set, the Reading page shows a sample shelf (Otis Chandler's, who founded Goodreads; user 1).
 // The editor says so in the two places it matters, and the warning goes away on the build
 // after a profile is added. YAML double-quoted strings, so no raw double quotes inside.
 const SAMPLE = !String(site.goodreads || "").trim() && reading.show !== false;
 const sampleWarning = SAMPLE
-  ? "⚠️ Not set yet, so your Reading page is showing a sample shelf: Adithya’s, not yours. Paste your profile address here, or turn the Reading page off under Reading. "
+  ? "⚠️ Not set yet, so your Reading page is showing a sample shelf: Otis Chandler’s, not yours. Paste your profile address here, or turn the Reading page off under Reading. "
   : "";
 
 // The same for Medium and Substack: until one is set, the Writing page (if it has any pieces) also
