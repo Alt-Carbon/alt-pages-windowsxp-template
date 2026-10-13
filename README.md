@@ -72,6 +72,10 @@ Titles, descriptions, canonical links, Open Graph and Twitter tags, structured d
 
 Unchanged from the Sidebar and Desktop templates. `src/worker/` reads the public Goodreads shelves named in `content/site.json` on a schedule, keeps them in KV, and serves them at `/reading/view.json`; Medium and Substack posts are read the same way and served at `/writing/elsewhere.json`. Until a profile is connected, the sample shelf and sample posts in `public/` are served and the editor says so. The Reading window draws the shelf with the four shelf styles (`src/scripts/shelf/`); Stacks is the default here.
 
+## Signing in without the company
+
+The editor signs in with GitHub, which needs a small server to turn a login code into a token. By default that is the company's sign-in service (Advanced → Sign-in service). Turn on Advanced → **Sign in through this site** and the site's own Worker is that server instead (`src/worker/auth.js`): publish, open `/auth/setup` on your site, and press the button. GitHub creates a private GitHub App on your account through its app manifest flow, sends the app's keys back to your Worker, which keeps them in its KV namespace, and then asks you to install the app on this repository. From then on `/admin` signs in through your own site, and nothing about it depends on anyone else. Only the owner of the repository named in the editor's config can complete setup, and a token is only ever handed to this site's own origin. If sign-in stops working, open `/auth/setup` again and create a new app.
+
 ## Layout
 
 | Path | What |
