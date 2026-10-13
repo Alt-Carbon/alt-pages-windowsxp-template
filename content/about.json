@@ -1,0 +1,50 @@
+{
+  "paragraphs": [
+    "I'm Asha Rao. I work on AI and internal tools at Alt Carbon, a company that removes carbon dioxide from the air by spreading crushed basalt on farmland.",
+    "Most of my work is making software that people who don't care about software can use without help. At the moment that means The Portfolio Project: every colleague gets a personal site they can edit themselves and take with them when they leave.",
+    "I like websites that are small, fast and made of text. This one is my argument for them."
+  ],
+  "experience": [
+    {
+      "role": "Software lead",
+      "org": "Alt Carbon",
+      "orgUrl": "https://altcarbon.com",
+      "start": "2023-04",
+      "end": "",
+      "summary": "AI and internal tools for field, lab and carbon accounting teams."
+    },
+    {
+      "role": "Software engineer",
+      "org": "FieldKit Labs",
+      "orgUrl": "https://example.com/fieldkit",
+      "start": "2020-06",
+      "end": "2023-03",
+      "summary": "Offline data collection apps for agricultural surveys."
+    },
+    {
+      "role": "Data analyst",
+      "org": "Monsoon Analytics",
+      "orgUrl": "https://example.com/monsoon",
+      "start": "2018-07",
+      "end": "2020-05",
+      "summary": "Rainfall and crop yield models for insurers."
+    }
+  ],
+  "cv": "",
+  "contact": "Email is best: [asha@example.com](mailto:asha@example.com). I answer most things within a week. I'm always glad to hear from people building small tools for field teams.",
+  "facts": [
+    {
+      "label": "Based in",
+      "value": "Bengaluru, India"
+    },
+    {
+      "label": "Time zone",
+      "value": "IST (UTC+5:30)"
+    },
+    {
+      "label": "Languages",
+      "value": "English, Hindi, Kannada"
+    }
+  ],
+  "shortBio": "Asha Rao builds AI and internal tools at Alt Carbon, an enhanced rock weathering company in India. Current project: a portable personal website for every employee."
+}

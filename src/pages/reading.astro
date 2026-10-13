@@ -1,0 +1,6 @@
+---
+import Desktop from "../layouts/Desktop.astro";
+import { reading, shown } from "../lib/content";
+const on = await shown();
+---
+<Desktop page="reading" open={on.has("reading") ? "reading" : "about"} title="Reading" description={reading.intro || undefined} />

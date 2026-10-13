@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#fcfcfc">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121212">
+<title>Editor</title>
+<link rel="cms-config-url" href="/admin/config.yml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap">
+<style>
+  /* The editor follows the site: neutral greys (Sveltia tints every grey with its base
+     hue, so the whole scale is redefined here), the system font, one Monsoon Iris accent,
+     softer corners. These are Sveltia's own theme variables; !important because its
+     stylesheet loads after this one. Check after any Sveltia upgrade. */
+  :root {
+    --sui-base-hue: 254 !important;   /* Monsoon Iris */
+    /* The dashboard's type scale (shadcn: 14px base, 12px small, 36px controls, 4px rhythm) and font. */
+    --sui-font-family-default: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
+    --sui-font-size-x-small: 11px !important; --sui-font-size-small: 12px !important; --sui-font-size-default: 14px !important;
+    --sui-font-size-large: 16px !important; --sui-font-size-x-large: 18px !important; --sui-font-size-xx-large: 20px !important; --sui-font-size-xxx-large: 24px !important;
+    --sui-line-height-default: 1.25 !important; --sui-line-height-compact: 1.43 !important; --sui-line-height-comfortable: 1.6 !important;
+    --sui-control-small-height: 32px !important; --sui-control-medium-height: 36px !important; --sui-control-large-height: 40px !important;
+    --sui-textbox-height: 36px !important; --sui-primary-row-height: 52px !important; --sui-secondary-row-height: 44px !important;
+    --sui-font-weight-bold: 600 !important;
+    --sui-control-medium-border-radius: 0.5rem !important;   /* shadcn --radius */
+    --sui-textbox-border-radius: calc(0.5rem - 2px) !important;
+    --sui-shadow-color: 0 0% 0% !important;
+  }
+  :root, :root[data-theme="light"] {
+    --sui-primary-accent-color: #3919A2 !important;   /* Monsoon Iris */
+    --sui-primary-accent-color-light: #704BD7 !important;   /* Majorelle Blue */
+    --sui-foreground-color-1-hsl: 240 10% 3.9% !important;
+    --sui-foreground-color-2-hsl: 240 5.9% 10% !important;
+    --sui-foreground-color-3-hsl: 240 5.3% 26.1% !important;
+    --sui-foreground-color-4-hsl: 240 3.8% 46.1% !important;
+    --sui-background-color-1-hsl: 0 0% 100% !important;
+    --sui-background-color-2-hsl: 0 0% 98% !important;
+    --sui-background-color-3-hsl: 240 4.8% 95.9% !important;
+    --sui-background-color-4-hsl: 240 5.9% 90% !important;
+    --sui-background-color-5-hsl: 240 4.9% 83.9% !important;
+    --sui-border-color-1-hsl: 240 4.9% 83.9% !important;
+    --sui-border-color-2-hsl: 240 5.9% 90% !important;
+  }
+  :root[data-theme="dark"] {
+    --sui-primary-accent-color: #704BD7 !important;
+    --sui-primary-accent-color-light: #9b82e6 !important;
+    --sui-foreground-color-1-hsl: 0 0% 98% !important;
+    --sui-foreground-color-2-hsl: 240 4.8% 95.9% !important;
+    --sui-foreground-color-3-hsl: 240 5% 64.9% !important;
+    --sui-foreground-color-4-hsl: 240 3.8% 46.1% !important;
+    --sui-background-color-1-hsl: 240 10% 3.9% !important;
+    --sui-background-color-2-hsl: 240 10% 3.9% !important;
+    --sui-background-color-3-hsl: 240 5.9% 10% !important;
+    --sui-background-color-4-hsl: 240 3.7% 15.9% !important;
+    --sui-background-color-5-hsl: 240 5.3% 26.1% !important;
+    --sui-border-color-1-hsl: 240 5.3% 26.1% !important;
+    --sui-border-color-2-hsl: 240 3.7% 15.9% !important;
+  }
+
+  /* Keep the sidebar while editing. Sveltia hides the page container and opens the
+     editor full-screen; this shows the sidebar pane beside the editor instead. The
+     script below makes it clickable. Depends on Sveltia's class names: re-check after
+     any upgrade. */
+  .page-root:has(.content-editor) #page-container { display: flex !important; }
+  .page-root:has(.content-editor) #page-container .resizable-pane-group > :not(:first-child) { display: none !important; }
+  .page-root:has(.content-editor) #page-container .resizable-pane-group > .resizable-pane:first-child { width: 240px !important; min-width: 240px !important; flex: none !important; pointer-events: auto !important; }
+  .page-root:has(.content-editor) .content-editor { position: fixed !important; top: 56px !important; left: 240px !important; right: 0 !important; bottom: 0 !important; width: auto !important; height: auto !important; border-left: 1px solid hsl(var(--sui-border-color-2-hsl)); }
+  @media (max-width: 900px) {
+    .page-root:has(.content-editor) #page-container { display: none !important; }
+    .page-root:has(.content-editor) .content-editor { left: 0 !important; top: 0 !important; }
+  }
+
+  /* Forms, in the manner of Payload: a wide column, left-aligned labels, big inputs,
+     list items as quiet cards. Targets Sveltia's internal class names (section.field,
+     .item-wrapper, .item-list): re-check after any upgrade. */
+  .content-editor .content-area .content { padding: 8px 0 80px; }
+  .content-editor section.field { padding: 24px 32px !important; max-width: 1000px; margin: 0 auto; }
+  .content-editor section.field + section.field { border-top: 1px solid hsl(var(--sui-border-color-2-hsl) / 0.5); }
+  .content-editor section.field > header { max-width: none !important; margin-bottom: 8px; }
+  .content-editor section.field > header h4 { font-size: 14px !important; font-weight: 500 !important; line-height: 1.25; letter-spacing: 0 !important; text-transform: none !important; color: hsl(var(--sui-foreground-color-2-hsl)); }
+  .content-editor section.field .field-wrapper { max-width: none !important; }
+  .content-editor section.field > .field-wrapper + *, .content-editor section.field [class*=hint], .content-editor section.field .description, .content-editor section.field p { margin-left: 0 !important; padding-left: 0 !important; font-size: 12px !important; line-height: 1.43; margin-top: 6px; }
+  .content-editor .content-area .pane > .inner > .header .toolbar { max-width: 1000px !important; padding: 0 32px; }
+  .content-editor input[type=text], .content-editor input[type=url], .content-editor input[type=date], .content-editor input[type=number], .content-editor textarea, .content-editor [role=textbox] {
+    font-size: 14px !important; line-height: 1.43 !important; padding: 8px 12px !important; min-height: 36px;
+    border: 1px solid hsl(var(--sui-border-color-2-hsl)) !important; border-radius: 6px !important;
+    background: hsl(var(--sui-background-color-1-hsl)) !important; box-shadow: none !important; }
+  .content-editor textarea { min-height: 88px; }
+  .content-editor .item-list { display: flex; flex-direction: column; gap: 8px; }
+  .content-editor .item-list > .item-wrapper { border: 1px solid hsl(var(--sui-border-color-2-hsl)) !important; border-radius: 8px !important; background: hsl(var(--sui-background-color-2-hsl)) !important; overflow: hidden; }
+  .content-editor .item-wrapper > .item { background: transparent !important; }
+  .content-editor .item-wrapper > .item > .header { background: hsl(var(--sui-background-color-3-hsl)) !important; min-height: 36px !important; padding: 0 6px !important; border-bottom: 1px solid hsl(var(--sui-border-color-2-hsl) / 0.6); }
+  .content-editor .item-wrapper > .item > .item-body > section.field { padding: 12px 16px 16px !important; border-top: 0 !important; }
+  .content-editor .item-wrapper > .item > .item-body > section.field > header h4 { font-size: 12px !important; font-weight: 500 !important; color: hsl(var(--sui-foreground-color-4-hsl)); }
+  /* Sveltia pins a list's top bar and its "Add" bar to the viewport while the list is on
+     screen; with cards and gaps they cut across the items. Let them sit in the flow. */
+  .content-editor div.toolbar.top { position: static !important; padding: 0 !important; margin-bottom: 10px; background: transparent !important; }
+  .content-editor div.toolbar.bottom.add { position: static !important; background: transparent !important; margin-top: 12px; min-height: 0 !important; height: auto !important; padding: 0 !important; justify-content: flex-end; }
+  .content-editor .button.primary { border-radius: 6px !important; font-weight: 600; }
+  .content-editor .button.secondary, .content-editor .button.tertiary { border-radius: 6px !important; }
+
+  /* Greys follow shadcn's zinc scale (ui.shadcn.com, "zinc" base colour) so the editor and
+     the dashboard read as one system; the accent is Monsoon Iris. */
+  /* Craft pass (Emil Kowalski's checklist + Web Interface Guidelines), 5 Oct 2026 */
+  /* Sveltia uses `transition: .2s` (all properties). Name the properties, keep them fast. */
+  .sui.button, .content-editor input, .content-editor textarea, #page-container [role=treeitem] {
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, outline-color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1) !important;
+    touch-action: manipulation; }
+  /* Press feedback on anything pressable. */
+  .sui.button:not(:disabled):active { transform: scale(0.97); }
+  #page-container [role=treeitem]:active { transform: scale(0.985); }
+  /* Hover states only where there is a pointer that can hover. */
+  @media (hover: hover) and (pointer: fine) {
+    .content-editor .item-wrapper > .item > .header .button { opacity: 0.55; }
+    .content-editor .item-wrapper > .item > .header:hover .button, .content-editor .item-wrapper > .item > .header .button:focus-visible { opacity: 1; }
+  }
+  @media (hover: none) { .content-editor .item-wrapper > .item > .header .button { opacity: 0.8; } }
+  /* Card header controls are 24px icons; give them a 32px hit area without growing the icon. */
+  .content-editor .item-wrapper > .item > .header .button { min-width: 32px !important; min-height: 32px !important; }
+  /* Sidebar: section labels as quiet eyebrows, counts in tabular figures. */
+  #page-container .option-group > .label, #page-container [role=tree] > [class*=label] { font-size: 11px !important; font-weight: 600 !important; letter-spacing: 0.06em; text-transform: uppercase; color: hsl(var(--sui-foreground-color-4-hsl)) !important; }
+  #page-container [role=treeitem] { font-variant-numeric: tabular-nums; font-size: 14px; }
+  /* Reduced motion: keep colour changes, drop movement. */
+  @media (prefers-reduced-motion: reduce) {
+    .sui.button, .content-editor input, .content-editor textarea, #page-container [role=treeitem] { transition-property: background-color, border-color, color, outline-color !important; }
+    .sui.button:not(:disabled):active, #page-container [role=treeitem]:active { transform: none; }
+  }
+
+  /* Sign-in page: a small mark, a quiet title, two stacked buttons. */
+  .app-shell > .outer > .main > .container { align-items: center; }
+  .app-shell .container > .inner { gap: 0 !important; max-width: 320px; text-align: center; }
+  .app-shell .container > .inner > img.logo { width: 40px !important; height: 40px !important; margin: 0 auto 20px !important; }
+  .app-shell .container > .inner > h1 { font-size: 20px !important; font-weight: 600 !important; letter-spacing: -0.01em; margin: 0 0 24px !important; }
+  .app-shell .container > .inner > .buttons { display: flex; flex-direction: column; gap: 8px; width: 280px; margin: 0 auto; }
+  .app-shell .container > .inner > .buttons .button { height: 36px !important; justify-content: center; }
+  .app-shell .container > .inner > .buttons .button.secondary { background: transparent !important; border-color: transparent !important; color: hsl(var(--sui-foreground-color-4-hsl)) !important; }
+  .app-shell .container > .inner > .buttons .button.secondary:hover { color: hsl(var(--sui-foreground-color-2-hsl)) !important; background: hsl(var(--sui-background-color-3-hsl)) !important; }
+  .app-shell .powered-by { font-size: 12px !important; color: hsl(var(--sui-foreground-color-4-hsl)) !important; opacity: .8; }
+</style>
+</head>
+<body>
+<script src="/admin/sveltia-cms.js"></script>
+<script>
+  // Sidebar navigation while the editor is open. Sveltia marks the page container
+  // inert during editing and does not reload the editor when the entry changes, so
+  // a sidebar click closes the editor through its own "Cancel Editing" button
+  // (which asks about unsaved changes) and then opens the target.
+  (() => {
+    const editor = () => document.querySelector('.content-editor');
+    const cancel = () => [...document.querySelectorAll('.content-editor button')].find((b) => /cancel editing/i.test(b.getAttribute('aria-label') || ''));
+    new MutationObserver(() => {
+      const pc = document.querySelector('#page-container');
+      if (pc && editor() && pc.inert) pc.inert = false;
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['inert'] });
+    document.addEventListener('click', async (ev) => {
+      const item = ev.target.closest('#page-container [role=treeitem]');
+      if (!item || !editor()) return;
+      ev.stopPropagation(); ev.preventDefault();
+      const name = item.textContent.trim().replace(/^[a-z_]+\s+/, '').replace(/\s+\d+$/, '').toLowerCase().replace(/\s+/g, '-');
+      const target = name === 'writing' ? '#/collections/writing' : `#/collections/_singletons/entries/${name === 'site-settings' ? 'site' : name}`;
+      cancel()?.click();
+      for (let i = 0; i < 40 && editor(); i++) await new Promise((r) => setTimeout(r, 100));
+      if (!editor()) location.hash = target;
+    }, true);
+  })();
+</script>
+</body>
+</html>

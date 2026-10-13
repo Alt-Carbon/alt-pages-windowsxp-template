@@ -1,0 +1,73 @@
+{
+  "intro": "I build the software side of our measurement work, so my name tends to sit in the middle of author lists. These are the pieces where the tooling mattered.",
+  "items": [
+    {
+      "title": "An offline-first pipeline for soil sampling in enhanced rock weathering trials",
+      "authors": "Meera Iyer, Asha Rao, Daniel Okafor, Priya Nair",
+      "venue": "EarthArXiv",
+      "year": 2026,
+      "kind": "Preprint",
+      "url": "https://example.com/preprint",
+      "note": "How we cut labelling errors in field samples to almost none.",
+      "links": [
+        {
+          "label": "PDF",
+          "url": "https://example.com/preprint.pdf"
+        },
+        {
+          "label": "Code",
+          "url": "https://example.com/code"
+        }
+      ]
+    },
+    {
+      "title": "Soil cation measurements from basalt-amended rice paddies, 2024–2025",
+      "authors": "Daniel Okafor, Asha Rao, Meera Iyer",
+      "venue": "Zenodo",
+      "year": 2025,
+      "kind": "Dataset",
+      "url": "https://example.com/dataset",
+      "note": "",
+      "links": [
+        {
+          "label": "Data",
+          "url": "https://example.com/dataset"
+        }
+      ]
+    },
+    {
+      "title": "Designing forms for people who don't want to fill them in",
+      "authors": "Asha Rao",
+      "venue": "Field Data Workshop, Bengaluru",
+      "year": 2025,
+      "kind": "Talk",
+      "url": "",
+      "note": "",
+      "links": [
+        {
+          "label": "Slides",
+          "url": "https://example.com/slides"
+        },
+        {
+          "label": "Recording",
+          "url": "https://example.com/video"
+        }
+      ]
+    },
+    {
+      "title": "Measurement, reporting and verification for enhanced weathering: a practitioner's checklist",
+      "authors": "Priya Nair, Meera Iyer, Asha Rao, Rahul Menon",
+      "venue": "Alt Carbon technical report",
+      "year": 2024,
+      "kind": "Report",
+      "url": "https://example.com/report",
+      "note": "",
+      "links": [
+        {
+          "label": "PDF",
+          "url": "https://example.com/report.pdf"
+        }
+      ]
+    }
+  ]
+}

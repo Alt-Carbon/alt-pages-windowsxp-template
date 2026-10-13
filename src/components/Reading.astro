@@ -1,0 +1,32 @@
+---
+// Reading: the bookshelf (the Sidebar template's shelf styles, drawn by the script from
+// /reading/view.json) and the reading list from content/reading.json.
+import { day, reading, site } from "../lib/content";
+const styles = [["journal", "Journal"], ["gallery", "Gallery"], ["stacks", "Stacks"], ["turn", "Turn"]];
+---
+<div class="reading">
+  <h1 class="vh">Reading</h1>
+  {reading.intro && <p class="intro">{reading.intro}</p>}
+  <div class="rtop">
+    <div class="tabs" role="tablist">
+      <button role="tab" type="button" aria-selected="true" data-tab="books">Books</button>
+      <button role="tab" type="button" aria-selected="false" data-tab="links">Links <span class="ct">{reading.links.length}</span></button>
+    </div>
+    <div class="shelfpick" role="group" aria-label="Shelf style">
+      {styles.map(([k, l]) => <button type="button" data-shelf={k} aria-pressed={k === site.shelf ? "true" : "false"}>{l}</button>)}
+    </div>
+  </div>
+  <div class="pane" data-pane="books">
+    <div class="shelf-host" data-default={site.shelf} data-goodreads={site.goodreads || undefined}>
+      <noscript><p class="src">The bookshelf needs JavaScript. {site.goodreads && <a href={site.goodreads}>See it on Goodreads.</a>}</p></noscript>
+    </div>
+  </div>
+  <div class="pane" data-pane="links" hidden>
+    <ul class="rlinks">
+      {reading.links.map((l) => (
+        <li><span class="k">{l.kind}</span><span class="b"><a href={l.url} target="_blank" rel="noopener">{l.title}</a>
+          <span class="n">{l.by}{l.date && ` · ${day(l.date)}`}</span>{l.note && <span class="nt">{l.note}</span>}</span></li>
+      ))}
+    </ul>
+  </div>
+</div>

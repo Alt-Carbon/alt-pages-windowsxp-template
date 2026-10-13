@@ -1,0 +1,94 @@
+{
+  "show": true,
+  "intro": "What I’ve been reading, and what I’d pass on.",
+  "links": [
+    {
+      "title": "How to Do Great Work",
+      "by": "Paul Graham",
+      "kind": "Article",
+      "date": "2026-09-01",
+      "note": "The one I send to new hires.",
+      "url": "https://paulgraham.com/greatwork.html"
+    },
+    {
+      "title": "An app can be a home-cooked meal",
+      "by": "Robin Sloan",
+      "kind": "Article",
+      "date": "2026-08-01",
+      "note": "Software for four people is allowed to exist.",
+      "url": "https://www.robinsloan.com/notes/home-cooked-app/"
+    },
+    {
+      "title": "A Brief History & Ethos of the Digital Garden",
+      "by": "Maggie Appleton",
+      "kind": "Article",
+      "date": "2026-07-01",
+      "note": "",
+      "url": "https://maggieappleton.com/garden-history"
+    },
+    {
+      "title": "Fast",
+      "by": "Patrick Collison",
+      "kind": "Article",
+      "date": "2026-05-01",
+      "note": "A list of things built quickly. Cheering.",
+      "url": "https://patrickcollison.com/fast"
+    },
+    {
+      "title": "You and Your Research",
+      "by": "Richard Hamming",
+      "kind": "Article",
+      "date": "2026-02-01",
+      "note": "A 1986 talk that still reads like advice from a colleague.",
+      "url": "https://www.cs.virginia.edu/~robins/YouAndYourResearch.html"
+    },
+    {
+      "title": "The Tail End",
+      "by": "Tim Urban",
+      "kind": "Article",
+      "date": "2025-12-01",
+      "note": "",
+      "url": "https://waitbutwhy.com/2015/12/the-tail-end.html"
+    },
+    {
+      "title": "Potential for large-scale CO₂ removal via enhanced rock weathering with croplands",
+      "by": "Beerling et al., Nature, 2020",
+      "kind": "Paper",
+      "date": "",
+      "note": "The paper most of our field is built on.",
+      "url": "https://scholar.google.com/scholar?q=Potential+for+large-scale+CO2+removal+via+enhanced+rock+weathering+with+croplands"
+    },
+    {
+      "title": "Inventing on Principle",
+      "by": "Bret Victor, 2012",
+      "kind": "Talk",
+      "date": "",
+      "note": "Why tools should show you what they're doing.",
+      "url": "https://worrydream.com/"
+    },
+    {
+      "title": "Volts",
+      "by": "David Roberts",
+      "kind": "Podcast",
+      "date": "",
+      "note": "Long interviews about the energy transition.",
+      "url": "https://www.volts.wtf/"
+    },
+    {
+      "title": "Works in Progress",
+      "by": "Magazine",
+      "kind": "Newsletter",
+      "date": "",
+      "note": "",
+      "url": "https://worksinprogress.co/"
+    },
+    {
+      "title": "CDR.fyi",
+      "by": "Carbon removal market data",
+      "kind": "Site",
+      "date": "",
+      "note": "Where I check who bought what.",
+      "url": "https://www.cdr.fyi/"
+    }
+  ]
+}

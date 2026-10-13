@@ -1,0 +1,197 @@
+---
+// Every page is the whole desktop with one window open. Each window's content is in the HTML, so the
+// page reads as an ordinary page without JavaScript (and to search engines); the script then turns it
+// into the desktop (src/scripts/xp/main.js). `open` is the window this address is for.
+import "winbox/dist/css/winbox.min.css";
+import "../styles/xp.css";
+import Journal from "../components/Journal.astro";
+import Research from "../components/Research.astro";
+import Reading from "../components/Reading.astro";
+import { about, currentRole, origin, owner, pages, reading, repo, shown, site, template } from "../lib/content";
+import { aboutText, deskData, first, icons, nowText, stats } from "../lib/desktop";
+
+interface Props {
+  page: string;            // for SEO: home, about, now, writing, essay, research, reading, 404
+  open: string;            // the window to open: about, now, writing, research, reading, or "" for none
+  title?: string;
+  description?: string;
+  image?: string;
+  published?: Date;
+  essay?: { slug: string; Content: any };
+}
+const { page, open, title, description, image = `/og/${page === "404" ? "home" : page === "essay" ? "home" : page}.png`, published, essay } = Astro.props;
+
+// ---- head: the same SEO the Sidebar template writes, from the content
+const on = await shown();
+const hidden = pages.some((p) => p.id === page && !on.has(p.id));
+const fullTitle = title ? `${title} · ${site.name}` : site.name;
+const desc = description || `${site.oneLiner} ${site.intro}`.trim();
+const base = origin(Astro.url);
+const path = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/") || "/";
+const url = base + path;
+const img = base + image;
+const sameAs = site.social.map((l) => l.url).filter((u) => /^https?:/.test(u));
+const person = { "@type": "Person", name: site.name, url: `${base}/about`, ...(site.photo && { image: base + site.photo }), ...(about.shortBio && { description: about.shortBio }), ...(currentRole ? { jobTitle: currentRole.role, worksFor: { "@type": "Organization", name: currentRole.org, ...(currentRole.orgUrl && { url: currentRole.orgUrl }) } } : site.employer && { worksFor: { "@type": "Organization", name: site.employer, ...(site.employerUrl && { url: site.employerUrl }) } }), ...(sameAs.length && { sameAs }) };
+const ld = page === "essay"
+  ? { "@context": "https://schema.org", "@type": "BlogPosting", headline: title, description: desc, url, image: img, datePublished: published?.toISOString().slice(0, 10), author: person }
+  : page === "about" ? { "@context": "https://schema.org", "@type": "ProfilePage", url, mainEntity: person }
+  : page === "home" ? { "@context": "https://schema.org", "@type": "WebSite", name: site.name, url, author: person }
+  : null;
+
+// ---- the desktop
+const list = await icons();
+const data = await deskData();
+const st = await stats();
+const social = site.social.map((l) => ({ ...l, web: /^https?:/.test(l.url) }));
+const show = (k: string) => open === k;
+// What the Start menu says under each program, the way XP named the app beneath the document.
+const APP: Record<string, string> = { txt: "Notepad", journal: "Journal", folder: "Explorer", books: "Bookshelf" };
+const initial = first.slice(0, 1).toUpperCase();
+const year = st.installed.slice(-4);
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Before first paint: mark that the script will run, and apply the colour scheme the visitor picked. -->
+<script is:inline>(function(){var d=document.documentElement;d.classList.add("js");try{var s=JSON.parse(localStorage.getItem("xp:scheme")||"null");if(s==="olive"||s==="silver")d.dataset.scheme=s;if(JSON.parse(localStorage.getItem("xp:classic")||"false"))d.dataset.classic=""}catch(e){}})()</script>
+<title>{fullTitle}</title>
+<meta name="description" content={desc}>
+<meta name="author" content={site.name}>
+{hidden && <meta name="robots" content="noindex">}
+{page !== "404" && <link rel="canonical" href={url}>}
+<meta property="og:site_name" content={site.name}>
+<meta property="og:title" content={title || site.name}>
+<meta property="og:description" content={desc}>
+<meta property="og:type" content={page === "essay" ? "article" : "website"}>
+<meta property="og:url" content={url}>
+<meta property="og:image" content={img}>
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content={fullTitle}>
+{published && <meta property="article:published_time" content={published.toISOString().slice(0, 10)}>}
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="alternate" type="application/rss+xml" href="/rss.xml" title={`${site.name}: writing`}>
+<link rel="sitemap" type="application/xml" href="/sitemap.xml">
+{ld && <script type="application/ld+json" set:html={JSON.stringify(ld).replace(/</g, "\\u003c")} />}
+<meta name="portfolio-template" content={`${template.name}@${template.version}`}>
+{owner && <meta name="portfolio-owner" content={owner}>}
+{repo && <meta name="portfolio-repo" content={repo}>}
+<link rel="alternate" type="application/json" href="/reading/view.json" title="Reading">
+</head>
+<body data-window={open} data-piece={essay?.slug}>
+<div id="boot" hidden aria-hidden="true"><div class="bl"><small>Starting</small><b>{first}<i>xp</i></b><div class="bar"><i></i><i></i><i></i></div></div><span class="cp">{first} XP · Version {year} · Everything here is text.</span></div>
+<div id="welcome" hidden>
+  <div class="wl"><b>welcome</b><p>To begin, click your name</p></div>
+  <div class="wr"><button class="tile" type="button">{site.photo ? <img src={site.photo} alt="" width="48" height="48"> : <span class="pic user"></span>}<span>{site.name}<small>{st.pieces > 0 ? `${st.pieces} ${st.pieces === 1 ? "piece" : "pieces"} of writing` : site.oneLiner}</small></span></button></div>
+  <div class="wf"><span>After you sign in, you can read everything, change nothing, and keep notes of your own.</span><span>{first} XP</span></div>
+</div>
+<div id="off" hidden></div>
+<div id="saver" hidden aria-hidden="true"></div>
+
+<canvas id="wall" aria-hidden="true"></canvas>
+<canvas id="rain" aria-hidden="true" hidden></canvas>
+<nav id="desktop" aria-label="Desktop">
+  <p class="vh">{site.name}</p>
+  {list.map((ic) => ic.href
+    ? <a class="icon" href={ic.href} data-open={ic.key} data-doc={ic.doc} data-ico={ic.ico} title={ic.full}><span class="pic" class:list={[ic.ico]}></span><span class="lbl">{ic.label}</span></a>
+    : <button class="icon" type="button" data-open={ic.key} data-ico={ic.ico}><span class="pic" class:list={[ic.ico]}></span><span class="lbl">{ic.label}</span></button>)}
+</nav>
+<div id="mark" aria-hidden="true"><b>{first} XP Professional</b><br><span>Build <i id="mark-date"></i></span></div>
+
+<nav id="taskbar" aria-label="Taskbar">
+  <button id="start" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="startmenu"><span class="flag" aria-hidden="true">{initial}</span>start</button>
+  <div id="tasks" role="list"></div>
+  <div id="tray">
+    <button id="owner" type="button" hidden></button>
+    <button id="clock" type="button" title="Date and time"></button>
+  </div>
+</nav>
+
+<div id="toasts" aria-live="polite"></div>
+
+<div id="startmenu" hidden>
+  <div class="who">{site.photo ? <img src={site.photo} alt="" width="42" height="42"> : <span class="pic user"></span>}<b>{site.name}</b></div>
+  <div class="cols">
+    <div class="left">
+      {list.filter((ic) => ic.href && !ic.doc).map((ic) => <button class="mi" type="button" data-open={ic.key}><span class="pic" class:list={[ic.ico]}></span><span><b>{ic.label}</b><small>{APP[ic.ico] || ""}</small></span></button>)}
+      <span class="pad"></span>
+      <hr>
+      <button class="mi" type="button" data-act="run"><span class="pic run"></span><span><b>Run…</b><small>⌥R</small></span></button>
+    </div>
+    <div class="right">
+      <button class="mi" type="button" data-open="computer"><span class="pic pc"></span>My Computer</button>
+      <button class="mi" type="button" data-act="display"><span class="pic display"></span>Display Properties</button>
+      {social.length > 0 && <hr>}
+      {social.map((l) => <a class="mi soft" href={l.url} target={l.web ? "_blank" : undefined} rel={l.web ? "noopener" : undefined}>{l.label}</a>)}
+      <span class="pad"></span>
+      <hr>
+      <button class="mi soft" type="button" data-act="help">Help and Support</button>
+    </div>
+  </div>
+  <div class="foot">
+    <button type="button" data-act="logoff"><span class="pic logoff"></span>Log Off</button>
+    <button type="button" data-act="off"><span class="pic off"></span>Turn Off Computer</button>
+  </div>
+</div>
+
+<div id="ctx" hidden>
+  <button type="button" data-act="arrange">Arrange Icons</button>
+  <button type="button" data-act="refresh">Refresh</button>
+  <hr>
+  <button type="button" data-act="display">Properties</button>
+</div>
+
+<main id="store">
+  <div class="winbody app-notepad" id="body-about" data-app="notepad" data-title="about.txt - Notepad" data-path="/about" hidden={!show("about")}>
+    <h1 class="vh">About {site.name}</h1>
+    <pre class="np" contenteditable="true" spellcheck="false">{aboutText()}</pre>
+  </div>
+  {on.has("now") && (
+    <div class="winbody app-notepad" id="body-now" data-app="notepad" data-title="now.txt - Notepad" data-path="/now" hidden={!show("now")}>
+      <h1 class="vh">Now</h1>
+      <pre class="np" contenteditable="true" spellcheck="false">{nowText()}</pre>
+    </div>
+  )}
+  <div class="winbody app-journal" id="body-writing" data-app="journal" data-title="Writing" data-path="/writing" hidden={!show("writing")}>
+    <Journal essay={essay} />
+  </div>
+  {on.has("research") && (
+    <div class="winbody app-explorer" id="body-research" data-app="explorer" data-title="Research" data-path="/research" hidden={!show("research")}>
+      <Research />
+    </div>
+  )}
+  {on.has("reading") && (
+    <div class="winbody app-reading" id="body-reading" data-app="reading" data-title="Reading" data-path="/reading" hidden={!show("reading")}>
+      <Reading />
+    </div>
+  )}
+  <div class="winbody app-sys" id="body-computer" data-app="sys" data-title="System Properties" hidden>
+    <div class="sys">
+      {site.photo ? <img class="sysico photo" src={site.photo} alt="" width="64" height="64"> : <div class="sysico pic pc"></div>}
+      <dl>
+        <dt>System</dt><dd>{first} XP Professional<br>Version {year}</dd>
+        <dt>Registered to</dt><dd>{site.name}{data.city && <><br>{data.city}</>}</dd>
+        <dt>Installed</dt><dd>{st.installed}</dd>
+        <dt>Last updated</dt><dd>{st.updated}</dd>
+        {st.pieces > 0 && <><dt>Writing</dt><dd>{st.pieces} {st.pieces === 1 ? "piece" : "pieces"}, {st.words.toLocaleString("en")} words</dd></>}
+        {st.research > 0 && <><dt>Research</dt><dd>{st.research} {st.research === 1 ? "item" : "items"}</dd></>}
+        <dt>Books read</dt><dd data-books>…</dd>
+        <dt>Uptime</dt><dd><span data-uptime>0 min</span></dd>
+        <dt>Memory</dt><dd>Enough. Everything here is text.</dd>
+      </dl>
+      <p class="hint">Windows by WinBox.js. Weather by Open-Meteo. Not affiliated with Microsoft.</p>
+    </div>
+  </div>
+  {open === "" && page === "404" && (
+    <div class="winbody notfound" id="body-notfound"><h1>Not found</h1><p>There is nothing at this address. <a href="/">Back to the desktop</a>.</p></div>
+  )}
+</main>
+
+<script type="application/json" id="desk-data" set:html={JSON.stringify(data).replace(/</g, "\\u003c")} />
+<script>import "../scripts/xp/main.js";</script>
+</body>
+</html>

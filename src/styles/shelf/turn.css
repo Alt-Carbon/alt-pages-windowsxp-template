@@ -1,0 +1,155 @@
+/* Bookshelf style "turn" (ported from protos/bookshelf-c-turn.html). Each row is a dark stage:
+   books stand spine-out as real 3D boxes, one turned to show its cover. Hover or focus turns a book
+   and its slot widens so the neighbours slide aside; a click opens the details inline under the row.
+   The stage is deliberately near-black in both themes; everything else follows the site's tokens.
+   The drawn book (cover, spine, pages) keeps raw geometry, as site.css allows for the shelf. */
+.shelf-turn button{color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+
+/* Search, pinned under the top of the viewport while the rows scroll past. */
+.shelf-turn .controls{position:sticky;top:0;z-index:5;display:flex;gap:var(--space-3);align-items:center;margin:var(--space-6) 0 0;padding:var(--space-3) 0;
+ background:color-mix(in srgb,var(--bg) 88%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.shelf-turn .search{position:relative;flex:1 1 220px;max-width:360px}
+.shelf-turn .search input{width:100%;font:var(--fs-lg) var(--font-ui);color:var(--ink);background:var(--hover);border:0;border-radius:var(--radius-full);padding:var(--space-2) var(--space-8) var(--space-2) var(--space-4);-webkit-appearance:none;appearance:none}
+.shelf-turn .search input::placeholder{color:var(--mute)}
+.shelf-turn .search input::-webkit-search-cancel-button{display:none}
+.shelf-turn .search kbd{position:absolute;right:10px;top:50%;translate:0 -50%;font:var(--fs-xs) var(--font-ui);color:var(--mute);border:1px solid var(--rule);border-radius:4px;padding:0 5px;pointer-events:none}
+.shelf-turn .search input:focus+kbd,.shelf-turn .search input:not(:placeholder-shown)+kbd{opacity:0}
+@media(hover:none){.shelf-turn .search kbd{display:none}}
+.shelf-turn .empty{margin:var(--space-12) 0;color:var(--mute)}
+
+/* ---------- Stage: a dark band in both themes ---------- */
+.shelf-turn .stage{--s-bg:light-dark(#0c0c0b,#060606);--s-ink:#ece7dd;--s-mute:#8e897f;--s-rule:rgba(255,255,255,.12);--s-hover:rgba(255,255,255,.07);
+ --accent:var(--accent-dark,#FF4F00);--accent-soft:color-mix(in srgb,var(--accent) 22%,transparent);
+ --t-ease:cubic-bezier(.2,.8,.2,1);
+ position:relative;isolation:isolate;margin-top:var(--space-6);border-radius:calc(var(--radius-lg) + var(--space-1));overflow:hidden;color:var(--s-ink);
+ background:radial-gradient(120% 90% at 50% 30%,light-dark(#1b1a17,#161513) 0%,light-dark(#121110,#0b0b0a) 45%,var(--s-bg) 100%);
+ box-shadow:inset 0 0 0 1px light-dark(rgba(255,255,255,.05),rgba(255,255,255,.07)),0 1px 2px rgba(0,0,0,.08)}
+.shelf-turn .rows>.stage:first-child{margin-top:var(--space-8)}
+.shelf-turn .stage::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:var(--grain);opacity:.06;mix-blend-mode:screen}
+
+.shelf-turn .rh{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:var(--space-4);padding:var(--space-5) var(--space-6) 0}
+.shelf-turn .rh .n{font:var(--fs-xs)/var(--lh-body) var(--font-ui);color:var(--s-mute);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.shelf-turn .rh h2{display:flex;align-items:center;gap:var(--space-4);margin:0;font:var(--display-weight) var(--fs-sm)/var(--lh-none) var(--font-display);font-size-adjust:var(--display-adjust);letter-spacing:.3em;text-transform:uppercase;white-space:nowrap;color:var(--s-ink)}
+.shelf-turn .rh h2 span{margin-right:-.3em}
+.shelf-turn .rh h2::before,.shelf-turn .rh h2::after{content:"";width:44px;height:1px;background:color-mix(in srgb,var(--s-ink) 34%,transparent)}
+.shelf-turn .rh .nav{justify-self:end;display:flex;gap:6px}
+.shelf-turn .rh .nav button{width:30px;height:30px;border-radius:var(--radius-full);display:grid;place-items:center;color:var(--s-mute);box-shadow:inset 0 0 0 1px var(--s-rule);transition:color .2s,box-shadow .2s,opacity .2s}
+.shelf-turn .rh .nav button:disabled{opacity:.3;cursor:default}
+.shelf-turn .rh .nav svg{width:14px;height:14px}
+@media(hover:hover){.shelf-turn .rh .nav button:not(:disabled):hover{color:var(--s-ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}}
+
+.shelf-turn .shelfwrap{position:relative}
+.shelf-turn .shelf{display:flex;align-items:flex-end;justify-content:safe center;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;padding:30px 56px 74px;scrollbar-width:none;
+ -webkit-mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(90deg,transparent,#000 40px,#000 calc(100% - 40px),transparent)}
+.shelf-turn .shelf::-webkit-scrollbar{display:none}
+.shelf-turn .shelf::after{content:"";flex:none;width:1px;height:1px}
+/* The floor the books stand on, with the faintest light spilling onto it. */
+.shelf-turn .shelfwrap::before{content:"";position:absolute;left:0;right:0;bottom:0;height:74px;pointer-events:none;
+ background:radial-gradient(60% 100% at 50% 0%,rgba(255,255,255,.035),transparent 70%)}
+.shelf-turn .shelfwrap::after{content:"";position:absolute;left:var(--space-6);right:var(--space-6);bottom:74px;height:1px;pointer-events:none;
+ background:linear-gradient(90deg,transparent,rgba(255,255,255,.16) 18%,rgba(255,255,255,.16) 82%,transparent)}
+.shelf-turn .cap{position:absolute;left:var(--space-6);right:var(--space-6);bottom:var(--space-5);margin:0;text-align:center;font:var(--fs-sm)/var(--lh-normal) var(--font-ui);color:var(--s-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.shelf-turn .cap b{font-weight:500;color:var(--s-ink)}
+.shelf-turn .cap .st{color:var(--accent);letter-spacing:.08em;margin-left:2px}
+
+/* ---------- A book: a slot whose width follows the book's projected width, holding a 3D box ---------- */
+.shelf-turn .bk{position:relative;flex:none;height:var(--h);margin:0 1px;padding:0;border-radius:2px}
+.shelf-turn .bk:focus-visible{outline-offset:6px;border-radius:3px}
+.shelf-turn .pp{position:absolute;inset:0;perspective:1100px;perspective-origin:50% 100%;
+ -webkit-box-reflect:below 0 linear-gradient(transparent 76%,rgba(0,0,0,.15))}
+.shelf-turn .bx{position:absolute;bottom:0;left:50%;width:var(--w);height:var(--h);margin-left:calc(var(--w) / -2);transform-style:preserve-3d;transform:rotateY(90deg);will-change:transform}
+.shelf-turn .fc{position:absolute;top:0;height:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.shelf-turn .fr{left:0;width:var(--w);transform:translateZ(calc(var(--d) / 2));background:var(--c);border-radius:1px 3px 3px 1px;overflow:hidden}
+.shelf-turn .fr img{display:block;width:100%;height:100%;object-fit:cover}
+.shelf-turn .fr::after{content:"";position:absolute;inset:0;pointer-events:none;
+ background:linear-gradient(90deg,rgba(0,0,0,.28) 0,rgba(255,255,255,.14) 2.5%,rgba(0,0,0,.12) 5%,rgba(0,0,0,0) 9%,rgba(255,255,255,.05) 40%,rgba(0,0,0,.06))}
+.shelf-turn .tc{position:absolute;inset:14% 12%;display:flex;flex-direction:column;justify-content:space-between;color:var(--t);text-align:left;overflow:hidden}
+.shelf-turn .tc b{font:var(--display-weight) 17px/1.15 var(--font-display);font-size-adjust:var(--display-adjust)}
+.shelf-turn .tc i{font:500 10px var(--font-ui);font-style:normal;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+.shelf-turn .dp-cv .tc b{font-size:var(--fs-xl)}
+.shelf-turn .dp-cv .tc i{font-size:var(--fs-2xs)}
+.shelf-turn .bk-bk{left:0;width:var(--w);transform:rotateY(180deg) translateZ(calc(var(--d) / 2));background:color-mix(in srgb,var(--c) 80%,#000)}
+.shelf-turn .sp{left:calc(50% - var(--d) / 2);width:var(--d);transform:rotateY(-90deg) translateZ(calc(var(--w) / 2));background:var(--c);color:var(--t);
+ writing-mode:vertical-rl;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 0 12px;overflow:hidden;border-radius:2px 2px 1px 1px}
+.shelf-turn .sp::before{content:"";position:absolute;inset:0;pointer-events:none;
+ background:linear-gradient(90deg,rgba(0,0,0,.34),rgba(0,0,0,.06) 16%,rgba(255,255,255,.12) 38%,rgba(255,255,255,0) 62%,rgba(0,0,0,.14) 88%,rgba(0,0,0,.32))}
+.shelf-turn .sp.band::after{content:"";position:absolute;left:0;right:0;top:9px;height:2px;background:currentColor;opacity:.5;box-shadow:0 5px 0 currentColor,0 calc(var(--h) - 24px) 0 currentColor}
+.shelf-turn .sp .ti{position:relative;min-inline-size:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1}
+.shelf-turn .sp.f0 .ti{font:500 clamp(11px,calc(var(--d) * .36),16px) var(--font-display);font-size-adjust:var(--display-adjust);letter-spacing:.01em}
+.shelf-turn .sp.f1 .ti{font:650 clamp(9px,calc(var(--d) * .26),12px) var(--font-ui);text-transform:uppercase;letter-spacing:.14em}
+.shelf-turn .sp .au{position:relative;flex:none;font:500 clamp(8px,calc(var(--d) * .21),9.5px) var(--font-ui);text-transform:uppercase;letter-spacing:.12em;opacity:.72;line-height:1}
+.shelf-turn .pg{top:3px;height:calc(100% - 4px);left:calc(50% - var(--d) / 2);width:var(--d);transform:rotateY(90deg) translateZ(calc(var(--w) / 2 - 2px));
+ background:repeating-linear-gradient(90deg,#f1ece2 0 1px,#d6cebf 1px 2px)}
+/* An accent tick on the floor marks the book whose details are open. */
+.shelf-turn .bk::after{content:"";position:absolute;left:50%;bottom:-16px;width:20px;height:2px;margin-left:-10px;border-radius:2px;background:var(--accent);opacity:0;scale:.4 1;transition:opacity .25s,scale .35s var(--t-ease)}
+.shelf-turn .bk[aria-expanded="true"]::after{opacity:1;scale:1}
+
+/* The "show all" slot: an empty outline of a book at the end of the row. */
+.shelf-turn .more{flex:none;align-self:flex-end;height:150px;width:40px;margin-left:14px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);
+ writing-mode:vertical-rl;font:var(--fs-2xs) var(--font-ui);letter-spacing:.06em;color:var(--s-mute);display:flex;align-items:center;justify-content:center;transition:color .2s,box-shadow .2s}
+.shelf-turn .more b{font-weight:500;color:var(--s-ink)}
+@media(hover:hover){.shelf-turn .more:hover{color:var(--s-ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}}
+
+/* ---------- Details, expanding inside the stage ---------- */
+.shelf-turn .dp{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s var(--t-ease)}
+.shelf-turn .dp.open{grid-template-rows:1fr}
+.shelf-turn .dp>div{overflow:hidden;min-height:0}
+.shelf-turn .dp-in{position:relative;margin:0 var(--space-6);padding:30px var(--space-2) 34px;border-top:1px solid var(--s-rule);
+ display:grid;grid-template-columns:148px minmax(0,1fr);grid-template-areas:"cv hd" "cv bd";column-gap:36px;align-items:start}
+.shelf-turn .dp-cv{grid-area:cv;position:relative;aspect-ratio:2/3;border-radius:2px 4px 4px 2px;overflow:hidden;background:var(--c,#333);box-shadow:0 20px 34px -18px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.04)}
+.shelf-turn .dp-cv img{display:block;width:100%;height:100%;object-fit:cover}
+.shelf-turn .dp-cv::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.25),rgba(255,255,255,.12) 3%,rgba(0,0,0,.1) 6%,transparent 10%)}
+.shelf-turn .dp-hd{grid-area:hd;padding-right:96px;min-width:0}
+.shelf-turn .kick{margin:0;font:var(--fs-2xs)/var(--lh-normal) var(--font-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--s-mute);font-variant-numeric:tabular-nums}
+.shelf-turn .dp h3{margin:var(--space-2) 0 0;font:var(--display-weight) 30px/1.12 var(--font-display);font-size-adjust:var(--display-adjust);letter-spacing:var(--track-display);text-wrap:balance;color:var(--s-ink)}
+.shelf-turn .by{margin:6px 0 0;font:var(--fs-base)/var(--lh-normal) var(--font-text);color:color-mix(in srgb,var(--s-ink) 78%,transparent)}
+.shelf-turn .dp .stars{display:inline-block;margin-top:var(--space-2);letter-spacing:.12em;font-size:var(--fs-md)}
+.shelf-turn .stars i{color:rgba(255,255,255,.18)}
+.shelf-turn .dp-bd{grid-area:bd;min-width:0}
+.shelf-turn .facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:var(--space-3) var(--space-5);margin:22px 0;padding:14px 0;border-top:1px solid var(--s-rule);border-bottom:1px solid var(--s-rule)}
+.shelf-turn .facts dt,.shelf-turn .facts dd{padding:0;border:0;margin:0;white-space:normal}
+.shelf-turn .facts dt{font:var(--fs-2xs)/var(--lh-normal) var(--font-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--s-mute)}
+.shelf-turn .facts dd{font:var(--fs-md)/var(--lh-normal) var(--font-ui);margin-top:2px;font-variant-numeric:tabular-nums;color:var(--s-ink)}
+.shelf-turn .rv h4{font:500 var(--fs-sm)/var(--lh-normal) var(--font-ui);color:var(--s-mute);margin:0 0 var(--space-2)}
+.shelf-turn .rv-t{max-width:64ch;overflow:hidden;max-height:var(--mh,15em);transition:max-height .45s var(--t-ease)}
+.shelf-turn .rv-t p{font:var(--fs-lg)/1.65 var(--font-text);margin:0 0 var(--space-3);color:color-mix(in srgb,var(--s-ink) 92%,transparent)}
+.shelf-turn .rv.clip .rv-t{-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent)}
+.shelf-turn .rv-more{margin-top:2px;font:var(--fs-sm) var(--font-ui);color:var(--s-ink);text-decoration:underline;text-decoration-color:rgba(255,255,255,.3);text-underline-offset:3px}
+@media(hover:hover){.shelf-turn .rv-more:hover{text-decoration-color:var(--accent)}}
+.shelf-turn .rv.none{margin:0;font:var(--fs-md)/var(--lh-normal) var(--font-text);color:var(--s-mute)}
+.shelf-turn .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.shelf-turn .acts a{display:inline-flex;align-items:center;gap:var(--space-2);font:var(--fs-md)/var(--lh-none) var(--font-ui);padding:var(--space-2) 14px;border-radius:var(--radius-full);text-decoration:none;color:var(--s-ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18);transition:box-shadow .2s,background-color .2s}
+.shelf-turn .acts a::after{content:"↗";margin-left:-2px}
+.shelf-turn .acts a:first-child{background:var(--s-ink);color:#141312;box-shadow:none}
+@media(hover:hover){.shelf-turn .acts a:hover{box-shadow:inset 0 0 0 1px var(--accent)}.shelf-turn .acts a:first-child:hover{background:#fff}}
+.shelf-turn .dp-tools{position:absolute;top:var(--space-6);right:var(--space-1);display:flex;gap:6px}
+.shelf-turn .dp-tools button{width:32px;height:32px;border-radius:var(--radius-full);display:grid;place-items:center;color:var(--s-mute);box-shadow:inset 0 0 0 1px var(--s-rule);transition:color .2s,box-shadow .2s}
+.shelf-turn .dp-tools button:disabled{opacity:.3;cursor:default}
+.shelf-turn .dp-tools svg{width:14px;height:14px}
+@media(hover:hover){.shelf-turn .dp-tools button:not(:disabled):hover{color:var(--s-ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}}
+.shelf-turn .dp-in.swap>*{animation:shelf-turn-swap .32s var(--t-ease)}
+@keyframes shelf-turn-swap{from{opacity:0;translate:0 6px}}
+
+@media(max-width:640px){
+ /* Full width on phones: the stage runs past the page's side gutters (.wrap pads --space-5). */
+ .shelf-turn .controls{margin-top:var(--space-5);padding:var(--space-2) 0}
+ .shelf-turn .stage{margin:var(--space-3) calc(-1 * var(--space-5)) 0;border-radius:0;box-shadow:none}
+ .shelf-turn .rows>.stage:first-child{margin-top:var(--space-5)}
+ .shelf-turn .rh{padding:18px var(--space-4) 0;gap:10px}
+ .shelf-turn .rh h2{font-size:var(--fs-xs);gap:10px}.shelf-turn .rh h2::before,.shelf-turn .rh h2::after{width:20px}
+ .shelf-turn .rh .nav button{width:28px;height:28px}
+ .shelf-turn .shelf{padding:24px 28px 62px;-webkit-mask-image:none;mask-image:none}
+ .shelf-turn .shelfwrap::before{height:62px}.shelf-turn .shelfwrap::after{bottom:62px;left:0;right:0}
+ .shelf-turn .cap{bottom:var(--space-4);left:var(--space-4);right:var(--space-4);font-size:var(--fs-xs)}
+ .shelf-turn .more{height:110px;width:34px}
+ .shelf-turn .dp-in{margin:0 var(--space-4);padding:22px 0 26px;grid-template-columns:76px minmax(0,1fr);grid-template-areas:"cv hd" "bd bd";column-gap:var(--space-4)}
+ .shelf-turn .dp-hd{padding-right:0}
+ .shelf-turn .dp h3{font-size:22px;margin-top:var(--space-1)}
+ .shelf-turn .by{font-size:var(--fs-md)}
+ .shelf-turn .dp-tools{position:static;grid-column:1 / -1;order:3;justify-content:flex-end;margin-top:18px}
+ .shelf-turn .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(prefers-reduced-motion:reduce){
+ .shelf-turn *,.shelf-turn *::before,.shelf-turn *::after{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+@media print{.shelf-turn .controls{display:none}}

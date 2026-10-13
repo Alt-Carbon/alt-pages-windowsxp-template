@@ -1,0 +1,6 @@
+---
+import Desktop from "../layouts/Desktop.astro";
+import { research, shown } from "../lib/content";
+const on = await shown();
+---
+<Desktop page="research" open={on.has("research") ? "research" : "about"} title="Research" description={research.intro || undefined} />

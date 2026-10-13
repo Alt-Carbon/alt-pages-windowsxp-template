@@ -1,0 +1,14 @@
+---
+// One piece of writing, open in the journal. Pieces published elsewhere have no page here.
+import { render } from "astro:content";
+import Desktop from "../../layouts/Desktop.astro";
+import { summary, writing } from "../../lib/content";
+
+export async function getStaticPaths() {
+  const posts = await writing();
+  return posts.filter((p) => !p.data.link).map((p) => ({ params: { slug: p.id }, props: { post: p } }));
+}
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+<Desktop page="essay" open="writing" title={post.data.title} description={summary(post)} image={`/og/writing/${post.id}.png`} published={post.data.date} essay={{ slug: post.id, Content }} />

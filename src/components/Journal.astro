@@ -1,0 +1,58 @@
+---
+// Writing as a journal: the owner's pieces in a sidebar, newest first, each one locked; below them the
+// visitor's own notes, which the script keeps in their browser. A page carries the full text of one
+// piece only (the one its address is for); the script fetches the others from their own pages.
+import { day, site, whereIs, writing } from "../lib/content";
+import { first } from "../lib/desktop";
+
+interface Props { essay?: { slug: string; Content: any } }
+const { essay } = Astro.props;
+const posts = await writing();
+const notes = site.desktop.notes;
+const host = (u: string) => u.replace(/^https?:\/\/([^/]+).*$/, "$1");
+const Content = essay?.Content;
+---
+<div class="jr" data-first={first} data-notes={notes ? "" : undefined}>
+  <aside class="jr-side" aria-label="Writing">
+    {notes && <button class="jr-new" type="button">New note</button>}
+    <h2><span>By {first}</span><span class="ct">{posts.length}</span></h2>
+    <ul class="jr-list">
+      {posts.map((p) => (
+        <li data-date={p.data.date.toISOString().slice(0, 10)}><a class="jr-item" href={p.data.link || `/writing/${p.id}`} data-note={p.id} aria-current={essay?.slug === p.id ? "true" : "false"}>
+          <span class="t">{p.data.title}{p.data.link && <> ↗ <span class="where">{whereIs(p.data.link)}</span></>}</span><span class="m">{day(p.data.date)}</span>
+        </a></li>
+      ))}
+    </ul>
+    {notes && <><h2 class="jr-mine-h" hidden><span>Your notes</span></h2><ul class="jr-list" data-mine-list></ul></>}
+  </aside>
+  <section class="jr-pane">
+    <button class="jr-back" type="button">All notes</button>
+    {posts.filter((p) => p.data.link).map((p) => (
+      <article class="jr-doc essay" data-doc={p.id} data-title={p.data.title} tabindex="-1" hidden>
+        <div class="jr-bar"><button class="lock" type="button" title={`Only ${first} can change this`}>Locked</button></div>
+        <div class="jr-text">
+          <h2 class="doc-title">{p.data.title}</h2><p class="stamp">{day(p.data.date)}</p>
+          {p.data.blurb && <p>{p.data.blurb}</p>}
+          <p><a class="btn primary ext" href={p.data.link} target="_blank" rel="noopener">Read it on {whereIs(p.data.link!) || host(p.data.link!)}</a></p>
+        </div>
+      </article>
+    ))}
+    {essay && Content && (() => {
+      const p = posts.find((x) => x.id === essay.slug)!;
+      return (
+        <article class="jr-doc essay" data-doc={p.id} data-title={p.data.title} tabindex="-1">
+          <div class="jr-bar"><button class="lock" type="button" title={`Only ${first} can change this`}>Locked</button>{notes && <span class="mn-hint">Select a passage to add your own note</span>}</div>
+          <div class="jr-text"><h1>{p.data.title}</h1><p class="stamp">{day(p.data.date)}</p><Content /></div>
+          <section class="mn-list" hidden></section>
+        </article>
+      );
+    })()}
+    {notes && (
+      <div class="jr-edit" hidden>
+        <div class="jr-bar"><span class="jr-status"></span><button class="jr-del" type="button">Delete</button></div>
+        <input class="jr-title" placeholder="Untitled" aria-label="Title" autocomplete="off">
+        <textarea class="jr-body" placeholder="Start writing" aria-label="Note"></textarea>
+      </div>
+    )}
+  </section>
+</div>

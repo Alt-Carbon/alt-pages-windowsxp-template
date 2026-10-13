@@ -1,0 +1,11 @@
+<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Alt Carbon">
+<style>svg{color:#1a1f1c}@media (prefers-color-scheme:dark){svg{color:#e6e6e6}}</style>
+<path d="M6.86951 0H5.12143V5.12633H0V6.87608H5.12143V11.9988H6.86951V6.87608H11.9873V5.12633H6.86951V0Z" fill="currentColor"/>
+<path d="M18.8568 0H17.1088V11.9988H18.8568V0Z" fill="currentColor"/>
+<path d="M11.9873 17.1251H0V18.8749H11.9873V17.1251Z" fill="currentColor"/>
+<path d="M35.9656 17.1251H23.9783V18.8749H35.9656V17.1251Z" fill="currentColor"/>
+<path d="M30.8442 5.12633V0H29.0961V5.12633H23.9783V6.87608H29.0961V11.9988H30.8442V6.87608H35.9656V5.12633H30.8442Z" fill="currentColor"/>
+<path d="M6.86951 24.0012H5.12143V29.1239H0V30.8773H5.12143V36H6.86951V30.8773H11.9873V29.1239H6.86951V24.0012Z" fill="currentColor"/>
+<path d="M18.8568 24.0012H17.1088V36H18.8568V24.0012Z" fill="currentColor"/>
+<path d="M30.8442 24.0012H29.0961V29.1239H23.9783V30.8773H29.0961V36H30.8442V30.8773H35.9656V29.1239H30.8442V24.0012Z" fill="currentColor"/>
+</svg>

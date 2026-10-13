@@ -1,0 +1,7 @@
+---
+// Now. While the Now page is switched off this address still exists, but search engines skip it and
+// the desktop opens on about.txt instead.
+import Desktop from "../layouts/Desktop.astro";
+import { day, now, site } from "../lib/content";
+---
+<Desktop page="now" open={now.show ? "now" : "about"} title="Now" description={`What ${site.name} is doing now. Updated ${day(now.updated)}.`} />

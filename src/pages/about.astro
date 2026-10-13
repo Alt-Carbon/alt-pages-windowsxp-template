@@ -1,0 +1,5 @@
+---
+import Desktop from "../layouts/Desktop.astro";
+import { about } from "../lib/content";
+---
+<Desktop page="about" open="about" title="About" description={about.shortBio || undefined} />

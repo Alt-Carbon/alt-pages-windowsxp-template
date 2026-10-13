@@ -1,0 +1,47 @@
+{
+  "name": "Asha Rao",
+  "pronunciation": "/ˈɑː.ʃə ˈraʊ/",
+  "greeting": "Hi, I am Asha",
+  "oneLiner": "I build AI tools and internal software at Alt Carbon.",
+  "intro": "We remove carbon dioxide from the air by spreading crushed basalt on farmland. I make the software around that easier to use.",
+  "place": "India",
+  "employer": "Alt Carbon",
+  "employerUrl": "https://altcarbon.com",
+  "photo": "/media/photo.png",
+  "social": [
+    {
+      "label": "Email",
+      "url": "mailto:asha@example.com"
+    },
+    {
+      "label": "LinkedIn",
+      "url": "https://example.com"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://example.com"
+    },
+    {
+      "label": "X",
+      "url": "https://example.com"
+    }
+  ],
+  "goodreads": "",
+  "grain": true,
+  "shelf": "stacks",
+  "accent": "aerospace-orange",
+  "advanced": {
+    "authWorker": "",
+    "owner": "",
+    "repo": ""
+  },
+  "desktop": {
+    "wallpaper": "blue",
+    "picture": "",
+    "city": "Bengaluru",
+    "weather": true,
+    "notes": true,
+    "boot": true,
+    "pinned": []
+  }
+}

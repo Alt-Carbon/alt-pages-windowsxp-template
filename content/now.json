@@ -1,0 +1,33 @@
+{
+  "show": true,
+  "updated": "2026-09-14",
+  "groups": [
+    {
+      "heading": "Work",
+      "items": [
+        "Building The Portfolio Project: a personal website for everyone at Alt Carbon, which they keep when they leave.",
+        "Prototyping three plain-text templates. You are looking at one.",
+        "Testing Sveltia CMS as the editor and Cloudflare Workers as the host."
+      ]
+    },
+    {
+      "heading": "Reading",
+      "items": [
+        "*Basin and Range*, slowly.",
+        "Rereading *The Checklist Manifesto*, because of a deployment checklist."
+      ]
+    },
+    {
+      "heading": "Life",
+      "items": [
+        "Long walks, fewer tabs."
+      ]
+    },
+    {
+      "heading": "Not doing",
+      "items": [
+        "New side projects, until this one ships."
+      ]
+    }
+  ]
+}

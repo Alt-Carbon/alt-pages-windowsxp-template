@@ -1,0 +1,42 @@
+---
+// Research: publications and talks by year, newest first, in an Explorer window with XP's task pane on
+// the left (Details, and Other Places that open the other windows). The owner's name is in bold.
+import { inline, markMe, research, shown } from "../lib/content";
+const years = [...new Set(research.items.map((r) => r.year))].sort((a, b) => b - a);
+const on = await shown();
+const n = research.items.length;
+---
+<div class="explorer research">
+  <aside class="xpane-l" aria-label="Tasks">
+    <div class="tbox"><h3>Details</h3><div class="tb-b"><b>Research</b>{n} {n === 1 ? "item" : "items"}{years.length > 1 && <>, {years[years.length - 1]}–{years[0]}</>}</div></div>
+    <div class="tbox"><h3>Other Places</h3><div class="tb-b">
+      <a href="/about" data-open="about"><span class="pic txt"></span>about.txt</a>
+      {on.has("writing") && <a href="/writing" data-open="writing"><span class="pic journal"></span>Writing</a>}
+      {on.has("reading") && <a href="/reading" data-open="reading"><span class="pic books"></span>Reading</a>}
+      <a href="/" data-open="computer"><span class="pic pc"></span>My Computer</a>
+    </div></div>
+  </aside>
+  <div class="xmain">
+    <h1 class="vh">Research</h1>
+    {research.intro && <p class="intro"><Fragment set:html={inline(research.intro)} /></p>}
+    {years.map((y) => (
+      <>
+        <h2>{y}</h2>
+        <ul class="pubs">
+          {research.items.filter((r) => r.year === y).map((r) => (
+            <li>
+              <span class="k">{r.kind}</span>
+              <span class="b">
+                {r.url ? <a href={r.url} target="_blank" rel="noopener">{r.title}</a> : <span class="t">{r.title}</span>}
+                {r.authors && <span class="au"><Fragment set:html={markMe(r.authors)} /></span>}
+                {r.venue && <span class="n">{r.venue}</span>}
+                {r.note && <span class="nt"><Fragment set:html={inline(r.note)} /></span>}
+                {r.links.length > 0 && <span class="lnk">{r.links.map((l) => <a href={l.url} target="_blank" rel="noopener">{l.label}</a>)}</span>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </>
+    ))}
+  </div>
+</div>

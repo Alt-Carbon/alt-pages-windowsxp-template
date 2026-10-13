@@ -1,0 +1,166 @@
+/* Bookshelf style "stacks" (from protos/bookshelf-b-stacks.html). Books lie flat in piles on a
+   table, spines toward you, so the titles read horizontally. Three piles to a row in the page
+   column, two on phones. Hover or focus slides a book out and names it in the caption under the
+   pile; pressing it opens a side drawer with the cover, the facts and the full review.
+   Every rule is scoped under .shelf-stacks (the #shelf root) or .shelf-stacks-drawer (the dialog).
+   The spines are drawn objects: their geometry (heights, widths, nudges, the cloth grain) is the
+   one place raw values are allowed. */
+.shelf-stacks,.shelf-stacks-drawer{
+ --stacks-ease:cubic-bezier(.2,.8,.2,1);--stacks-spring:cubic-bezier(.34,1.4,.64,1);
+ /* A finer, denser grain than the page's, blended into each book's colour as book cloth. */
+ --stacks-cloth:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4 .5' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E");
+}
+html:has(.shelf-stacks-drawer[open]){overflow:hidden}
+
+/* Controls: search and the group toggle, sticky at the top of the column. */
+.shelf-stacks .controls{position:sticky;top:0;z-index:5;display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap;margin:var(--space-5) calc(-1 * var(--space-5)) 0;padding:var(--space-3) var(--space-5);
+ background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--rule)}
+.shelf-stacks .search{position:relative;flex:1 1 220px;max-width:360px}
+.shelf-stacks .search input{width:100%;font:var(--fs-lg) var(--font-ui);color:var(--ink);background:var(--hover);border:0;border-radius:var(--radius-full);padding:var(--space-2) var(--space-8) var(--space-2) var(--space-4);-webkit-appearance:none;appearance:none}
+.shelf-stacks .search input::placeholder{color:var(--mute)}
+.shelf-stacks .search input::-webkit-search-cancel-button{display:none}
+.shelf-stacks .search kbd{position:absolute;right:var(--space-3);top:50%;translate:0 -50%;font:var(--fs-xs) var(--font-ui);color:var(--mute);border:1px solid var(--rule);border-radius:4px;padding:0 5px;transition:opacity var(--ease)}
+.shelf-stacks .search input:focus+kbd,.shelf-stacks .search input:not(:placeholder-shown)+kbd{opacity:0}
+.shelf-stacks .seg{position:relative;display:inline-flex;padding:2px;border-radius:var(--radius-full);background:var(--hover)}
+.shelf-stacks .seg button{position:relative;z-index:1;font:var(--fs-sm)/var(--lh-body) var(--font-ui);padding:5px var(--space-3);border:0;border-radius:var(--radius-full);background:none;color:var(--mute);cursor:pointer;touch-action:manipulation;transition:color var(--ease)}
+.shelf-stacks .seg button[aria-pressed="true"]{color:var(--ink);background:var(--raised);box-shadow:0 0 0 1px var(--rule),0 1px 2px rgba(0,0,0,.06)}
+@media(hover:hover){.shelf-stacks .seg button:hover{color:var(--ink)}}
+
+/* The table: piles in a grid, each row standing on one continuous line. */
+.shelf-stacks .view{container-type:inline-size}
+.shelf-stacks .table{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:var(--space-12);margin-top:var(--space-10)}
+.shelf-stacks .cell{display:grid;grid-template-rows:auto 1fr auto auto;min-width:0}
+.shelf-stacks .label{display:flex;align-items:baseline;gap:var(--space-2);padding:0 var(--space-5) var(--space-4);min-width:0}
+.shelf-stacks .label h2{margin:0;font-size:var(--fs-xl);line-height:var(--lh-snug);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-wrap:unset}
+.shelf-stacks .label .part{font:var(--fs-sm) var(--font-ui);color:var(--mute);white-space:nowrap;font-variant-numeric:tabular-nums}
+.shelf-stacks .label .n{margin-left:auto;font:var(--fs-sm) var(--font-ui);color:var(--mute);font-variant-numeric:tabular-nums}
+.shelf-stacks .label .dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent);align-self:center;margin-right:-2px}
+
+.shelf-stacks .pile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;padding:0 var(--space-5);container-type:inline-size}
+.shelf-stacks .pile::after{content:"";position:absolute;left:14%;right:14%;bottom:-2px;height:12px;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.28),rgba(0,0,0,0));filter:blur(3px);pointer-events:none;z-index:-1}
+.shelf-stacks .plank{height:2px;background:var(--plank)}
+.shelf-stacks .caption{min-height:38px;margin:var(--space-3) var(--space-5) 0;font:var(--fs-sm)/var(--lh-medium) var(--font-ui);color:var(--mute);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-variant-numeric:tabular-nums}
+.shelf-stacks .caption b{color:var(--ink);font-weight:500}
+.shelf-stacks .caption .st{color:var(--accent);letter-spacing:.04em}
+
+/* A book lying flat, spine toward you. --c and --t come from the cover (shared.ts sampleAll). */
+.shelf-stacks .bk{position:relative;flex:none;display:flex;align-items:center;gap:8px;width:var(--w);height:var(--h);margin-top:-1px;padding:0 10px 0 13px;
+ border:0;border-radius:2px 3px 3px 2px;color:var(--t,#f6f3ec);text-align:left;cursor:pointer;touch-action:manipulation;
+ background:
+  linear-gradient(180deg,rgba(255,255,255,.20),rgba(255,255,255,.05) 16%,rgba(255,255,255,0) 42%,rgba(0,0,0,0) 62%,rgba(0,0,0,.24)),
+  linear-gradient(90deg,rgba(0,0,0,.22),rgba(0,0,0,0) 9px,rgba(0,0,0,0) calc(100% - 7px),rgba(0,0,0,.20)),
+  var(--stacks-cloth) 0 0/120px 120px,
+  var(--c,#777);
+ background-blend-mode:normal,normal,soft-light,normal;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 1px 0 rgba(0,0,0,.16);
+ transform:translateX(calc(var(--x) * .45cqi + var(--pull,0px))) rotate(var(--r));
+ transition:transform .42s var(--stacks-spring),color .4s ease;
+ -webkit-tap-highlight-color:transparent}
+.shelf-stacks .bk::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s var(--stacks-ease);
+ box-shadow:0 12px 20px -10px rgba(0,0,0,.5),0 3px 6px -2px rgba(0,0,0,.2)}
+.shelf-stacks .bk .ti{flex:1;min-width:0;font:400 var(--fs,15px)/1 var(--font-display);font-size-adjust:var(--display-adjust);letter-spacing:.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:.15em 0}
+.shelf-stacks .bk .au{flex:none;font:600 9.5px/1 var(--font-ui);letter-spacing:.09em;text-transform:uppercase;opacity:.72;white-space:nowrap}
+.shelf-stacks .bk.it .ti{font-style:italic}
+.shelf-stacks .bk.noau .au{display:none}
+/* Binding bands near the head of some spines. */
+.shelf-stacks .bk.band{padding-left:30px}
+.shelf-stacks .bk.band::after{content:"";position:absolute;top:0;bottom:0;left:11px;width:9px;border-left:1.5px solid currentColor;border-right:1.5px solid currentColor;opacity:.42;pointer-events:none}
+/* A bookmark ribbon out of the tail of books in progress. */
+.shelf-stacks .bk .rib{position:absolute;right:-9px;top:calc(50% - 3px);width:11px;height:6px;background:var(--accent);clip-path:polygon(0 0,100% 0,72% 50%,100% 100%,0 100%);pointer-events:none}
+@media(hover:hover){
+ .shelf-stacks .bk:hover{--pull:16px;z-index:2}
+ .shelf-stacks .bk:hover::before{opacity:1}
+}
+.shelf-stacks .bk:focus-visible{--pull:16px;z-index:3;outline-offset:3px}
+.shelf-stacks .bk:focus-visible::before,.shelf-stacks .bk.open::before{opacity:1}
+.shelf-stacks .bk.open{--pull:16px;z-index:2}
+@container (max-width:180px){
+ .shelf-stacks .bk{padding:0 8px 0 10px;gap:6px}
+ .shelf-stacks .bk.band{padding-left:24px}
+ .shelf-stacks .bk.band::after{left:8px;width:8px}
+ .shelf-stacks .bk .au{font-size:8.5px;letter-spacing:.06em}
+}
+
+/* Books settle onto the pile, bottom first. */
+.shelf-stacks .drop .bk{animation:shelf-stacks-settle .55s var(--stacks-ease) both;animation-delay:calc(var(--j) * 28ms + var(--pd) * 40ms)}
+@keyframes shelf-stacks-settle{from{opacity:0;translate:0 -14px}}
+
+.shelf-stacks .empty{margin:var(--space-18) 0;color:var(--mute)}
+.shelf-stacks .empty button{font:inherit;color:var(--ink);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:#b5b5b5;text-underline-offset:3px}
+
+/* Phones: two piles to a row. */
+@container (max-width:640px){
+ .shelf-stacks .table{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:var(--space-10);margin-top:var(--space-8)}
+ .shelf-stacks .label{padding:0 var(--space-3) var(--space-3);gap:6px}
+ .shelf-stacks .label h2{font-size:var(--fs-xl)}
+ .shelf-stacks .pile{padding:0 var(--space-3)}
+ .shelf-stacks .caption{margin:var(--space-3) var(--space-3) 0;font-size:var(--fs-xs);min-height:34px}
+}
+@media(max-width:640px){
+ .shelf-stacks .controls{margin:var(--space-5) calc(-1 * var(--space-4)) 0;padding:var(--space-3) var(--space-4);gap:var(--space-2)}
+ .shelf-stacks .search{flex-basis:100%;max-width:none}
+}
+
+/* ---------- The drawer ---------- */
+.shelf-stacks-drawer{position:fixed;inset:0 0 0 auto;margin:0;width:min(520px,calc(100vw - 28px));height:100dvh;max-height:none;max-width:none;border:0;padding:0;
+ background:var(--bg);color:var(--ink);box-shadow:-1px 0 0 var(--rule),-30px 0 80px -30px rgba(0,0,0,.35);overflow:hidden;
+ transform:translateX(104%);transition:transform .5s var(--stacks-ease)}
+.shelf-stacks-drawer[open]{display:flex;flex-direction:column}
+.shelf-stacks-drawer.in{transform:none}
+.shelf-stacks-drawer::backdrop{background:rgba(12,10,8,.34);opacity:0;transition:opacity .4s ease}
+.shelf-stacks-drawer.in::backdrop{opacity:1}
+.shelf-stacks-drawer .dbar{flex:none;display:flex;align-items:center;gap:6px;padding:var(--space-3) 14px var(--space-3) var(--space-6);border-bottom:1px solid var(--rule)}
+.shelf-stacks-drawer .dfrom{font:var(--fs-sm)/var(--lh-body) var(--font-ui);color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.shelf-stacks-drawer .dfrom b{font-weight:500;color:var(--ink)}
+.shelf-stacks-drawer .grow{flex:1}
+.shelf-stacks-drawer .dpos{font:var(--fs-sm)/var(--lh-body) var(--font-ui);color:var(--mute);font-variant-numeric:tabular-nums;margin-right:6px;white-space:nowrap}
+.shelf-stacks-drawer .ibtn{flex:none;display:grid;place-items:center;width:34px;height:34px;border:0;border-radius:var(--radius-full);background:none;color:var(--mute);cursor:pointer;touch-action:manipulation;transition:color var(--ease),background-color var(--ease)}
+.shelf-stacks-drawer .ibtn svg{width:16px;height:16px}
+.shelf-stacks-drawer .ibtn:disabled{opacity:.3;cursor:default}
+@media(hover:hover){.shelf-stacks-drawer .ibtn:not(:disabled):hover{color:var(--ink);background:var(--hover)}}
+.shelf-stacks-drawer .dscroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 0 var(--space-18)}
+.shelf-stacks-drawer .dhead{display:grid;grid-template-columns:112px minmax(0,1fr);gap:22px;align-items:end;padding:var(--space-8) var(--space-8) var(--space-6);background:linear-gradient(180deg,color-mix(in srgb,var(--c,#888) 16%,var(--bg)),var(--bg))}
+.shelf-stacks-drawer .dcover{position:relative;aspect-ratio:2/3;border-radius:2px 4px 4px 2px;overflow:hidden;background:var(--c,var(--panel));box-shadow:0 1px 1px rgba(0,0,0,.12),0 16px 26px -14px rgba(0,0,0,.5)}
+.shelf-stacks-drawer .dcover img{display:block;width:100%;height:100%;object-fit:cover}
+.shelf-stacks-drawer .dcover::after{content:"";position:absolute;left:4px;top:0;bottom:0;width:2px;background:rgba(0,0,0,.14)}
+.shelf-stacks-drawer h2{margin:0;font-size:var(--fs-2xl);line-height:var(--lh-tight);text-wrap:balance;overflow-wrap:break-word}
+.shelf-stacks-drawer .dby{margin:var(--space-2) 0 0;font-size:var(--fs-lg);color:var(--mute)}
+.shelf-stacks-drawer .dstars{margin:var(--space-3) 0 0;font-size:var(--fs-md);line-height:var(--lh-none)}
+.shelf-stacks-drawer .dbody{padding:0 var(--space-8)}
+.shelf-stacks-drawer .actions{display:flex;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-1) 0 0}
+.shelf-stacks-drawer .actions a{display:inline-flex;align-items:center;gap:6px;font:var(--fs-md)/var(--lh-none) var(--font-ui);padding:var(--space-2) var(--space-4);border-radius:var(--radius-full);text-decoration:none;border:1px solid var(--rule);transition:border-color var(--ease),background-color var(--ease)}
+.shelf-stacks-drawer .actions a::after{content:" ↗";color:var(--mute);margin-left:-2px}
+.shelf-stacks-drawer .actions a:first-child{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.shelf-stacks-drawer .actions a:first-child::after{color:inherit;opacity:.7}
+@media(hover:hover){
+ .shelf-stacks-drawer .actions a:hover{border-color:var(--accent)}
+ .shelf-stacks-drawer .actions a:first-child:hover{background:color-mix(in srgb,var(--ink) 86%,var(--accent))}
+}
+.shelf-stacks-drawer .facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4) 18px;margin:var(--space-6) 0 0;padding:18px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.shelf-stacks-drawer .facts:empty{display:none}
+.shelf-stacks-drawer .facts dt,.shelf-stacks-drawer .facts dd{padding:0;border:0;margin:0;white-space:normal}
+.shelf-stacks-drawer .facts dt{font:var(--fs-2xs)/var(--lh-medium) var(--font-ui);letter-spacing:var(--track-caps);text-transform:uppercase;color:var(--mute)}
+.shelf-stacks-drawer .facts dd{font:var(--fs-md)/var(--lh-medium) var(--font-ui);margin-top:3px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.shelf-stacks-drawer .shelves{display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--space-4)}
+.shelf-stacks-drawer .shelves:empty{display:none}
+.shelf-stacks-drawer .shelves span{padding:2px 9px;border-radius:var(--radius-full);background:var(--hover);font:var(--fs-xs)/var(--lh-body) var(--font-ui);color:var(--mute)}
+.shelf-stacks-drawer .review{margin-top:var(--space-8)}
+.shelf-stacks-drawer .review h3{margin:0 0 var(--space-3);font:500 var(--fs-sm)/var(--lh-body) var(--font-ui);font-size-adjust:none;letter-spacing:0;color:var(--mute)}
+.shelf-stacks-drawer .review p{font:var(--fs-base)/var(--lh-body) var(--font-text);margin:0 0 var(--space-4);overflow-wrap:break-word}
+.shelf-stacks-drawer .review.none p{font-size:var(--fs-md);color:var(--mute)}
+.shelf-stacks-drawer .dscroll>*{transition:opacity .22s ease,translate .32s var(--stacks-ease)}
+.shelf-stacks-drawer.swap .dscroll>*{opacity:0;translate:0 6px}
+@media(max-width:640px){
+ .shelf-stacks-drawer .dhead{grid-template-columns:88px minmax(0,1fr);gap:var(--space-4);padding:var(--space-6) var(--space-5) var(--space-5)}
+ .shelf-stacks-drawer h2{font-size:var(--fs-xl)}
+ .shelf-stacks-drawer .dbody{padding:0 var(--space-5)}
+ .shelf-stacks-drawer .dbar{padding-left:18px}
+ .shelf-stacks-drawer .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(prefers-reduced-motion:reduce){
+ .shelf-stacks *,.shelf-stacks *::before,.shelf-stacks-drawer,.shelf-stacks-drawer *,.shelf-stacks-drawer::backdrop{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-delay:0s!important}
+}
+@media print{
+ .shelf-stacks .controls,.shelf-stacks-drawer{display:none!important}
+}

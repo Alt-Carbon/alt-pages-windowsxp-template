@@ -1,0 +1,56 @@
+[
+  {
+    "id": "aerospace-orange",
+    "label": "Aerospace orange",
+    "light": "#FF4F00",
+    "dark": "#FF4F00"
+  },
+  {
+    "id": "neon-red",
+    "label": "Neon red",
+    "light": "#FF3131",
+    "dark": "#FF3131"
+  },
+  {
+    "id": "neon-pink",
+    "label": "Neon pink",
+    "light": "#FF10F0",
+    "dark": "#FF10F0"
+  },
+  {
+    "id": "neon-purple",
+    "label": "Neon purple",
+    "light": "#BC13FE",
+    "dark": "#BC13FE"
+  },
+  {
+    "id": "neon-blue",
+    "label": "Neon blue",
+    "light": "#1F51FF",
+    "dark": "#1F51FF"
+  },
+  {
+    "id": "neon-cyan",
+    "label": "Neon cyan",
+    "light": "#04A2AD",
+    "dark": "#00F0FF"
+  },
+  {
+    "id": "neon-green",
+    "label": "Neon green",
+    "light": "#20AA05",
+    "dark": "#39FF14"
+  },
+  {
+    "id": "electric-lime",
+    "label": "Electric lime",
+    "light": "#7D9E05",
+    "dark": "#CCFF00"
+  },
+  {
+    "id": "neon-yellow",
+    "label": "Neon yellow",
+    "light": "#9F9506",
+    "dark": "#FFF01F"
+  }
+]

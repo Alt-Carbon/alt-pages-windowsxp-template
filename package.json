@@ -1,0 +1,40 @@
+{
+  "name": "alt-pages-windowsxp-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Portfolio Project's XP template: a personal site as a Windows XP desktop, edited at /admin, yours to keep.",
+  "license": "MIT",
+  "scripts": {
+    "predev": "node scripts/prepare.mjs",
+    "dev": "astro dev",
+    "prebuild": "node scripts/prepare.mjs",
+    "build": "astro build",
+    "preview": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "astro check",
+    "test": "node --test \"test/*.test.mjs\"",
+    "sample:shelf": "node scripts/sample-shelf.mjs",
+    "sample:posts": "node scripts/sample-posts.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/eb-garamond": "^5.3.0",
+    "@fontsource-variable/geist": "^5.3.0",
+    "astro": "^7.3.5",
+    "zod": "^4.6.5",
+    "winbox": "0.2.82"
+  },
+  "devDependencies": {
+    "@fontsource/eb-garamond": "^5.3.0",
+    "@fontsource/geist": "^5.3.0",
+    "@resvg/resvg-js": "^2.6.2",
+    "@sveltia/cms": "0.228.0",
+    "satori": "^0.35.1",
+    "wrangler": "^4.147.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.28.1": true,
+    "workerd@1.20261001.1": true
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "links": [
+    "Article",
+    "Paper",
+    "Book",
+    "Talk",
+    "Video",
+    "Podcast",
+    "Newsletter",
+    "Site"
+  ],
+  "research": [
+    "Paper",
+    "Preprint",
+    "Report",
+    "Thesis",
+    "Book chapter",
+    "Dataset",
+    "Software",
+    "Talk",
+    "Poster"
+  ]
+}

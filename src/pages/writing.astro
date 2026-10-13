@@ -1,0 +1,10 @@
+---
+// Writing: the journal, open at the newest piece that lives on this site.
+import { render } from "astro:content";
+import Desktop from "../layouts/Desktop.astro";
+import { site, writing, writingPage } from "../lib/content";
+const posts = await writing();
+const latest = posts.find((p) => !p.data.link);
+const essay = latest ? { slug: latest.id, Content: (await render(latest)).Content } : undefined;
+---
+<Desktop page="writing" open="writing" title="Writing" description={writingPage.intro || `Essays and notes by ${site.name}.`} essay={essay} />
