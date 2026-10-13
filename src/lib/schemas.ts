@@ -43,7 +43,7 @@ export const Site = z.object({
   owner: z.string().default(""),
   repo: z.string().default(""),
   authWorker: z.string().default(""),
-  advanced: z.object({ url: z.string().default(""), authWorker: z.string().default(""), owner: z.string().default(""), repo: z.string().default("") }).default({}),
+  advanced: z.object({ url: z.string().default(""), authWorker: z.string().default(""), signInHere: z.boolean().default(false), owner: z.string().default(""), repo: z.string().default("") }).default({}),
 });
 
 export const Now = z.object({

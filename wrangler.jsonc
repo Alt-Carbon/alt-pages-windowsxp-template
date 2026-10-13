@@ -15,8 +15,9 @@
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
     // Pages, feeds and /reading go through the script: it stamps in the site's address and decides
-    // whether to serve the sample /reading/view.json. Images, scripts and the editor skip it.
-    "run_worker_first": ["/*", "!/_astro/*", "!/media/*", "!/og/*", "!/admin/*", "!/favicon.svg", "!/apple-touch-icon.png"]
+    // whether to serve the sample /reading/view.json. Images, scripts and the editor's bundle skip
+    // it; the editor's config.yml goes through so sign-in can point at this site's own address.
+    "run_worker_first": ["/*", "!/_astro/*", "!/media/*", "!/og/*", "!/admin/sveltia-cms.js", "!/admin/logo.svg", "!/favicon.svg", "!/apple-touch-icon.png"]
   },
   "build": { "command": "npm run build" },
   // Reading and posts syncs. Each object's own alarm is the schedule; the cron is a nudge.
