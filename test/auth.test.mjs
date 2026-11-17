@@ -86,6 +86,8 @@ test("/auth/setup shows the manifest form with a state cookie", async () => {
   assert.ok(body.includes(`action="https://github.com/settings/apps/new?state=${state}"`));
   assert.ok(body.includes('name="manifest"'));
   assert.ok(body.includes("asha-site sign-in"));
+  assert.ok(body.includes("Step 1 of 2"));
+  assert.ok(body.includes("Create GitHub App for asha"), "shows the button GitHub will show");
 });
 
 test("after installing, GitHub comes back to /auth/setup/installed, which leads to the editor", async () => {
@@ -133,7 +135,7 @@ test("/auth/setup/done refuses a code without the matching state cookie", async 
 test("/auth/setup without a known repository explains what to set", async () => {
   const res = await run(fakeEnv({ repo: "OWNER/REPO" }), "/auth/setup");
   const body = await res.text();
-  assert.ok(body.includes("does not know which repository"));
+  assert.ok(body.includes("doesn't know its repository"));
   assert.ok(!body.includes("settings/apps/new"));
 });
 
@@ -148,6 +150,7 @@ test("/auth/setup/done keeps the new app's keys, marked not installed until GitH
     const res = await run(env, "/auth/setup/done?code=abc&state=s1", { cookie: "auth-setup-state=s1" });
     const body = await res.text();
     assert.ok(body.includes("https://github.com/apps/asha-site-sign-in/installations/new"));
+    assert.ok(body.includes("Step 2 of 2"));
     const app = JSON.parse(env.kv.get("auth:app"));
     assert.equal(app.client_id, "Iv1.x");
     assert.equal(app.installed, false);
@@ -160,7 +163,8 @@ test("/auth/setup/done keeps the new app's keys, marked not installed until GitH
 test("/auth/setup after creating but not installing goes straight to the install step", async () => {
   const res = await run(fakeEnv({ app: { client_id: "c", slug: "asha-site-sign-in", owner: "asha", installed: false } }), "/auth/setup");
   const body = await res.text();
-  assert.ok(body.includes("One step left"));
+  assert.ok(body.includes("Install the sign-in app"));
+  assert.ok(body.includes("Step 2 of 2"));
   assert.ok(body.includes('href="https://github.com/apps/asha-site-sign-in/installations/new"'));
   assert.ok(!body.includes("settings/apps/new"));
 });
