@@ -10,8 +10,8 @@
 // GET  /callback              GitHub sends the person back here; the token goes to the editor
 //                             by postMessage, to this site's origin only
 //
-// Turn it on in the editor: Site settings → Advanced → "Sign in through this site". Until
-// then the editor keeps using the sign-in service named there (the company's by default).
+// This is the editor's sign-in by default: scripts/prepare.mjs points the editor's base_url at
+// this site. Site settings → Advanced → "Other sign-in service" points it somewhere else instead.
 //
 // Only the owner of the site's repository can complete setup: GitHub tells us who owns the
 // new app, and that login must match the repository owner in the editor's configuration.

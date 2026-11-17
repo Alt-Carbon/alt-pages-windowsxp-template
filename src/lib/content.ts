@@ -13,7 +13,7 @@ import { About, LINK_KINDS, Now, Reading, Research, Site, WritingPage } from "./
 
 // Typographic quotes: ' and " become curly in everything people type, links and markup aside.
 // Applied to every string in the content files except addresses and ids.
-const RAW = new Set(["url", "photo", "goodreads", "medium", "substack", "hide", "link", "owner", "repo", "authWorker", "accent", "updated", "date", "kind"]);
+const RAW = new Set(["url", "photo", "goodreads", "medium", "substack", "hide", "link", "owner", "repo", "authWorker", "dashboard", "accent", "updated", "date", "kind"]);
 export function smart(s: string): string {
   return s.split(/(\]\([^)]*\)|<[^>]*>)/).map((part, i) => (i % 2 ? part : part
     .replace(/(^|[\s([{\u2014\u2013-])"/g, "$1\u201c").replace(/"/g, "\u201d")
