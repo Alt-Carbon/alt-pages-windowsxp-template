@@ -7,6 +7,7 @@
 // GET  /auth/setup/done       GitHub sends the owner back here with a code; the Worker turns it
 //                             into the app's client id and secret and keeps them in KV
 // GET  /auth/setup/installed  GitHub sends the owner back here after installing the app
+// GET/POST /auth/update      the weekly update's last run, and "Update now" (src/worker/updates.js)
 // GET  /auth/status           { ready }: whether the editor can sign in yet. The editor's page
 //                             asks this before loading, and shows its own "set up sign-in
 //                             first" screen until it is true (see public/admin/index.html)
@@ -225,7 +226,9 @@ async function setupDone(request, env, url) {
   if (!sameLogin(owner, repo.split("/")[0])) {
     return setupPage(request, env, url, `The app was created by ${owner || "someone else"}, but this site's repository belongs to ${repo.split("/")[0] || "an unknown login"}. Delete that app on GitHub and try again signed in as the repository owner.`);
   }
-  await env.BOOKS.put(APP_KEY, JSON.stringify({ client_id: app.client_id, client_secret: app.client_secret, slug: app.slug, owner, html_url: app.html_url, created: new Date().toISOString(), installed: false }));
+  // id and pem (the app's private key) let the site's Worker act as the app for the weekly update
+  // (src/worker/update.js). They stay in this site's own storage, like the client secret.
+  await env.BOOKS.put(APP_KEY, JSON.stringify({ client_id: app.client_id, client_secret: app.client_secret, slug: app.slug, owner, html_url: app.html_url, app_id: app.id, pem: app.pem, created: new Date().toISOString(), installed: false }));
   const install = `https://github.com/apps/${app.slug}/installations/new`;
   return html(page("Install the sign-in app", `${steps(2)}<p class="eyebrow">Step 2 of 2</p><h1>Now install it</h1>
 <p>GitHub made <b>${esc(app.slug)}</b>. One more press: install it so your editor can save your changes to <code>${esc(repo)}</code>.</p>
@@ -294,9 +297,12 @@ async function status(env) {
   return new Response(JSON.stringify({ ready: isReady(app), created: !!app }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
 }
 
+export { readApp };
+
 export async function auth(request, env, url) {
-  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { allow: "GET" } });
   const path = url.pathname.replace(/\/$/, "");
+  if (path === "/auth/update") return (await import("./updates.js")).updateRoute(request, env);
+  if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { allow: "GET" } });
   if (path === "/auth") return start(request, env, url);
   if (path === "/callback") return callback(request, env, url);
   if (path === "/auth/setup") return setupPage(request, env, url);

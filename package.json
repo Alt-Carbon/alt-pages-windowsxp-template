@@ -32,7 +32,6 @@
     "@fontsource/eb-garamond": "^5.3.0",
     "@fontsource/geist": "^5.3.0",
     "@resvg/resvg-js": "^2.6.2",
-    "@sveltia/cms": "0.228.0",
     "satori": "0.35.1",
     "wrangler": "^4.147.0"
   },

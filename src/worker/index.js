@@ -31,6 +31,7 @@ import { UA } from "./core/sync.js";
 import { allBooks } from "./store.js";
 import { postsName } from "./posts-store.js";
 import { auth } from "./auth.js";
+import { weekly } from "./updates.js";
 import { sayHello } from "./hello.js";
 
 export { ShelfSync } from "./sync-object.js";
@@ -195,7 +196,9 @@ export default {
 
   // The object keeps its own alarm. The cron only makes sure a profile that was
   // set while nothing visited the site still gets its first sync.
-  async scheduled(event, env) {
+  async scheduled(event, env, ctx) {
+    // At most once a week: bring the site up to date with its template (src/worker/updates.js).
+    ctx.waitUntil(weekly(env).catch(() => null));
     const res = await env.ASSETS.fetch("https://assets.local/reading/config.json").catch(() => null);
     const userId = res?.ok ? (await res.json()).userId : null;
     if (userId) await object(env, userId).kick(userId, `cron ${event.cron}`);

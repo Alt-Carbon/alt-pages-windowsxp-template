@@ -1,23 +1,8 @@
 <!doctype html>
-<html lang="en">
-<head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Editor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap">
-<link rel="stylesheet" href="./editor.css">
-</head>
-<body>
-<div id="app"></div>
-<script type="module">
-  // Our own editor (alt-pages-editor), alongside Sveltia at /admin while it
-  // is being tried. Same content, same sign-in, same configuration (/admin/config.yml).
-  // editor.js and editor.css are the editor's build (npm run bundle there), copied here by hand for now.
-  import { start } from "./editor.js";
-  start(document.getElementById("app"));
-</script>
-</body>
-</html>
+<!-- The editor lives at /admin now; /editor was where it was tried out beside Sveltia. -->
+<meta http-equiv="refresh" content="0; url=/admin/">
+<script>location.replace("/admin/" + location.hash)</script>
+<a href="/admin/">Open the editor</a>

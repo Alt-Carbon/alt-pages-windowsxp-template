@@ -78,11 +78,11 @@ write("src/generated/build.json", JSON.stringify({ ...buildInfo, builtAt: same &
 const DEFAULT_DASHBOARD = "https://alt-pages-dashboard.manish-176.workers.dev";
 const dashboard = String(adv.dashboard ?? DEFAULT_DASHBOARD).trim().replace(/\/+$/, "");
 mkdirSync("public/hello", { recursive: true });
-write("public/hello/config.json", JSON.stringify({ dashboard, ...buildInfo }));
+// The weekly update (src/worker/update.js) reads which template to follow from here too.
+write("public/hello/config.json", JSON.stringify({ dashboard, ...buildInfo, templateRepo: String(pkg.portfolio?.templateRepo || "") }));
 
 // --- editor -----------------------------------------------------------------
 mkdirSync("public/admin", { recursive: true });
-write("public/admin/sveltia-cms.js", readFileSync("node_modules/@sveltia/cms/dist/sveltia-cms.js"));
 
 const link = `{ label: Link, name: url, widget: string }`;
 const links = (name, label, hint = "", pad = "      ") => `
@@ -120,7 +120,6 @@ singletons:
     format: json
     fields:
       - { label: Name, name: name, widget: string }
-      - { label: Pronunciation, name: pronunciation, widget: string, required: false, hint: "Optional, e.g. /ˈɑː.ʃə ˈraʊ/" }
       - { label: Greeting, name: greeting, widget: string, required: false, hint: "What Run answers when a visitor types hello, e.g. Hi, I am Asha" }
       - { label: One-liner, name: oneLiner, widget: string, hint: "One sentence about you. The site's description in search results and link previews." }
       - { label: Second line, name: intro, widget: text, required: false, hint: "One or two more sentences, added to the description after the one-liner." }
@@ -155,11 +154,7 @@ singletons:
         hint: "Rarely needed. Leave these as they are unless something is not working."
         fields:
           - { label: Site address, name: url, widget: string, required: false, hint: "Leave empty: the site fills in its own address when someone visits. Only set this (e.g. https://asha.example.com) if link previews show the wrong address." }
-          - { label: Get improvements automatically, name: autoUpdate, widget: boolean, default: true, required: false, hint: "Once a week your site picks up fixes and improvements from the template it was made from, and only if it still builds afterwards. Your words, photos and settings are never changed. Turn off to keep the site exactly as it is." }
-          - { label: Company dashboard, name: dashboard, widget: string, required: false, hint: "Once a day your site tells this address where it is online and which GitHub repository it comes from, so it shows up in the company's list of sites. Nothing about your visitors is sent. Empty it to stop." }
-          - { label: Other sign-in service, name: authWorker, widget: string, required: false, hint: "Leave empty. Your site signs you in to this editor by itself: the first time, open /auth/setup on your site and press the button. Only fill this in if you have been given the address of a different sign-in service." }
-          - { label: GitHub login, name: owner, widget: string, required: false }
-          - { label: Repository, name: repo, widget: string, required: false, hint: "owner/name" }
+          - { label: Get improvements automatically, name: autoUpdate, widget: boolean, default: true, required: false, hint: "Once a week your site picks up fixes and improvements from the template it was made from, by itself. Your words, photos and settings are never changed. Turn off to keep the site exactly as it is." }
   - name: now
     label: Now
     icon: calendar_today
@@ -216,7 +211,7 @@ singletons:
     format: json
     fields:
           - { label: Subtitle, name: intro, widget: text, required: false, hint: "Its description in search results and link previews. Your pieces are under Writing; posts from Medium and Substack join them once those are set under Site settings." }
-          - { label: Posts to leave out, name: hide, widget: list, required: false, collapsed: true, field: { label: Address, name: url, widget: string }, hint: "${postsWarning}Addresses of Medium or Substack posts that should not appear on the Writing page or the home page." }
+          - { label: Posts to leave out, name: hide, widget: list, required: false, collapsed: true, source: /writing/elsewhere.json, field: { label: Address, name: url, widget: string }, hint: "${postsWarning}Addresses of Medium or Substack posts that should not appear on the Writing page or the home page." }
   - name: research
     label: Research
     icon: science
