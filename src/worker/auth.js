@@ -6,6 +6,7 @@
 // GET  /auth/setup            a page with one button: "Create the sign-in app on GitHub"
 // GET  /auth/setup/done       GitHub sends the owner back here with a code; the Worker turns it
 //                             into the app's client id and secret and keeps them in KV
+// GET  /auth/setup/installed  GitHub sends the owner back here after installing the app
 // GET  /auth?provider=github  the editor opens this in a popup; redirects to GitHub to sign in
 // GET  /callback              GitHub sends the person back here; the token goes to the editor
 //                             by postMessage, to this site's origin only
@@ -40,6 +41,10 @@ export function manifest(origin, repo) {
     url: origin,
     redirect_url: `${origin}/auth/setup/done`,
     callback_urls: [`${origin}/callback`],
+    // After installing, GitHub sends the owner back to this site instead of leaving them on
+    // GitHub's settings page with no way back.
+    setup_url: `${origin}/auth/setup/installed`,
+    setup_on_update: false,
     public: false,
     default_permissions: { contents: "write", metadata: "read" },
     default_events: [],
@@ -58,11 +63,13 @@ export const sameLogin = (a, b) => !!a && !!b && a.toLowerCase() === b.toLowerCa
 // The page the editor's popup ends on. Sveltia's protocol: the opener says "authorizing:github",
 // this page answers "authorization:github:<success|error>:<json>". A token is only ever sent to
 // this site's own origin; an error is harmless and goes to whoever asked.
-export function popupHtml(origin, { token, error, errorCode }) {
+// Sveltia's protocol: the window says "authorizing:github"; the editor answers with the same
+// message; the window replies "authorization:github:<success|error>:<json>". A token is only ever
+// sent to this site's own origin; an error is harmless and goes to whoever asked.
+function popupScript(origin, { token, error, errorCode }) {
   const state = error ? "error" : "success";
   const content = error ? { provider: "github", error, errorCode } : { provider: "github", token };
-  return `<!doctype html><html><body><script>
-(() => {
+  return `(() => {
   const own = ${JSON.stringify(origin)};
   const hasToken = ${JSON.stringify(!!token)};
   window.addEventListener("message", ({ data, origin }) => {
@@ -71,8 +78,33 @@ export function popupHtml(origin, { token, error, errorCode }) {
     window.opener?.postMessage(${JSON.stringify(`authorization:github:${state}:`)} + ${JSON.stringify(JSON.stringify(content))}, origin);
   });
   window.opener?.postMessage("authorizing:github", "*");
-})();
+})();`;
+}
+
+// The page the editor's sign-in window ends on.
+export function popupHtml(origin, content) {
+  return `<!doctype html><html><body><script>
+${popupScript(origin, content)}
 </script></body></html>`;
+}
+
+export const SETUP_FIRST = "Sign-in isn't set up for this site yet. Set it up in the window that opened (two clicks on GitHub), then press Sign in with GitHub again.";
+
+// The editor's sign-in window when the site has no sign-in app yet: it answers the editor with an
+// error right away (so the editor stops waiting) and offers the setup in a normal tab.
+export function setupNeededHtml(origin) {
+  return page("Set up sign-in first", `<h1>First, set up sign-in</h1>
+<p>Your site signs you in to its editor by itself. The first time, it needs a small app on your GitHub account: two clicks.</p>
+<a class="btn" href="/auth/setup" target="_blank" rel="opener">Set up sign-in</a>
+<p class="muted">It opens in a new tab. When it says sign-in is ready, come back to your editor and press "Sign in with GitHub" again. You can close this window.</p>`).replace("</body>", `<script>${popupScript(origin, { error: SETUP_FIRST, errorCode: "SETUP_REQUIRED" })}</script></body>`);
+}
+
+// Where GitHub sends the owner after installing the app.
+export function installedHtml(origin) {
+  return page("Sign-in is ready", `<h1>Sign-in is ready</h1>
+<p>Your site can now sign you in to its editor with GitHub.</p>
+<a class="btn" href="${esc(origin)}/admin/">Open your editor</a>
+<p class="muted">Press "Sign in with GitHub" there. If your editor is already open in another tab, press it there instead.</p>`);
 }
 
 // --- helpers -------------------------------------------------------------------------------
@@ -151,7 +183,7 @@ async function setupDone(request, env, url) {
 <p>GitHub created <a href="${esc(app.html_url || install)}">${esc(app.slug)}</a> on your account and this site now holds its keys.</p>
 <p>One more step: install the app on this site's repository, <code>${esc(repo)}</code>, so the editor may read and write your content. Choose only that repository.</p>
 <a class="btn" href="${install}">Install it on ${esc(repo)}</a>
-<p class="muted">Then open <code>/admin</code> and press "Sign in with GitHub". If you came here from the editor's sign-in window, close it first and press the button again.</p>`), 200, { "set-cookie": setCookie(STATE_COOKIE, "deleted", 0) });
+<p class="muted">GitHub brings you back here afterwards, with a button to your editor.</p>`), 200, { "set-cookie": setCookie(STATE_COOKIE, "deleted", 0) });
 }
 
 // --- the editor's sign-in -----------------------------------------------------------------
@@ -161,8 +193,10 @@ async function start(request, env, url) {
   const provider = url.searchParams.get("provider") || "github";
   if (provider !== "github") return popup(origin, { error: "This site signs in with GitHub only.", errorCode: "UNSUPPORTED_BACKEND" });
   const app = await readApp(env);
-  // Not set up yet: the popup becomes the setup page, which is where the owner wants to be.
-  if (!app) return setupPage(request, env, url, "This site has no sign-in app yet. If you are the owner, create one below.");
+  // Not set up yet. The setup goes through several GitHub pages, which this small sign-in window
+  // cannot survive: the editor would wait for it forever. So the window tells the editor at once
+  // ("set up sign-in first"), and offers the setup in a normal tab.
+  if (!app) return html(setupNeededHtml(origin), 200, { "set-cookie": setCookie(CSRF_COOKIE, "deleted", 0) });
   const csrf = random();
   const params = new URLSearchParams({ client_id: app.client_id, redirect_uri: `${origin}/callback`, state: csrf });
   return new Response(null, {
@@ -204,5 +238,6 @@ export async function auth(request, env, url) {
   if (path === "/callback") return callback(request, env, url);
   if (path === "/auth/setup") return setupPage(request, env, url);
   if (path === "/auth/setup/done") return setupDone(request, env, url);
+  if (path === "/auth/setup/installed") return html(installedHtml(url.origin));
   return new Response("Not found", { status: 404 });
 }

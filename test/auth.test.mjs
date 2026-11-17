@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { auth, manifest, popupHtml, repoFromConfig, sameLogin } from "../src/worker/auth.js";
+import { auth, manifest, popupHtml, repoFromConfig, sameLogin, SETUP_FIRST } from "../src/worker/auth.js";
 
 const ORIGIN = "https://asha.example.workers.dev";
 
@@ -48,16 +48,35 @@ test("the popup page sends a token to this site's origin only, and errors to any
   assert.ok(bad.includes('"authorization:github:error:"'));
 });
 
-test("/auth with no app yet shows the setup page with a manifest form and a state cookie", async () => {
+test("/auth with no app yet answers the editor at once and offers the setup in a new tab", async () => {
   const res = await run(fakeEnv(), "/auth?provider=github&site_id=asha.example.workers.dev&scope=repo");
+  assert.equal(res.status, 200);
+  const body = await res.text();
+  // The editor gets an error straight away instead of waiting on a window that wanders off to GitHub.
+  assert.ok(body.includes("authorization:github:error:"));
+  assert.ok(body.includes(JSON.stringify(JSON.stringify({ provider: "github", error: SETUP_FIRST, errorCode: "SETUP_REQUIRED" }))));
+  assert.ok(body.includes('href="/auth/setup" target="_blank"'));
+  assert.equal(cookieOf(res, "auth-setup-state"), undefined, "no setup is started inside the editor's window");
+});
+
+test("/auth/setup shows the manifest form with a state cookie", async () => {
+  const res = await run(fakeEnv(), "/auth/setup");
   assert.equal(res.status, 200);
   const body = await res.text();
   const state = cookieOf(res, "auth-setup-state");
   assert.ok(state && state.length >= 32);
   assert.ok(body.includes(`action="https://github.com/settings/apps/new?state=${state}"`));
-  assert.ok(body.includes("name=&quot;manifest&quot;".replace(/&quot;/g, '"')));
+  assert.ok(body.includes('name="manifest"'));
   assert.ok(body.includes("asha-site sign-in"));
-  assert.ok(body.includes("no sign-in app yet"));
+});
+
+test("after installing, GitHub comes back to /auth/setup/installed, which leads to the editor", async () => {
+  assert.equal(manifest(ORIGIN, "asha/asha-site").setup_url, `${ORIGIN}/auth/setup/installed`);
+  const res = await run(fakeEnv(), "/auth/setup/installed?installation_id=1&setup_action=install");
+  assert.equal(res.status, 200);
+  const body = await res.text();
+  assert.ok(body.includes("Sign-in is ready"));
+  assert.ok(body.includes(`href="${ORIGIN}/admin/"`));
 });
 
 test("/auth with an app redirects to GitHub with a csrf state cookie; /callback checks it", async () => {
