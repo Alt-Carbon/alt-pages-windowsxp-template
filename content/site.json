@@ -31,6 +31,8 @@
   "shelf": "stacks",
   "accent": "aerospace-orange",
   "advanced": {
+    "autoUpdate": true,
+    "dashboard": "https://alt-pages-dashboard.manish-176.workers.dev",
     "authWorker": "",
     "owner": "",
     "repo": ""

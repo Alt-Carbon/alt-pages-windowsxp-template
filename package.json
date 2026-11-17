@@ -5,6 +5,9 @@
   "type": "module",
   "description": "The Portfolio Project's XP template: a personal site as a Windows XP desktop, edited at /admin, yours to keep.",
   "license": "MIT",
+  "portfolio": {
+    "templateRepo": "Alt-Carbon/alt-pages-windowsxp-template"
+  },
   "scripts": {
     "predev": "node scripts/prepare.mjs",
     "dev": "astro dev",
@@ -15,7 +18,8 @@
     "check": "astro check",
     "test": "node --test \"test/*.test.mjs\"",
     "sample:shelf": "node scripts/sample-shelf.mjs",
-    "sample:posts": "node scripts/sample-posts.mjs"
+    "sample:posts": "node scripts/sample-posts.mjs",
+    "update-from-template": "node scripts/update-from-template.mjs"
   },
   "dependencies": {
     "@fontsource-variable/eb-garamond": "^5.3.0",

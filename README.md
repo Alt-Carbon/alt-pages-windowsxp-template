@@ -72,6 +72,10 @@ Titles, descriptions, canonical links, Open Graph and Twitter tags, structured d
 
 Unchanged from the Sidebar and Desktop templates. `src/worker/` reads the public Goodreads shelves named in `content/site.json` on a schedule, keeps them in KV, and serves them at `/reading/view.json`; Medium and Substack posts are read the same way and served at `/writing/elsewhere.json`. Until a profile is connected, the sample shelf and sample posts in `public/` are served and the editor says so. The Reading window draws the shelf with the four shelf styles (`src/scripts/shelf/`); Stacks is the default here.
 
+## Signing in without the company
+
+The editor signs in with GitHub, which needs a small server to turn a login code into a token. By default that is the company's sign-in service (Advanced → Sign-in service). Turn on Advanced → **Sign in through this site** and the site's own Worker is that server instead (`src/worker/auth.js`): publish, open `/auth/setup` on your site, and press the button. GitHub creates a private GitHub App on your account through its app manifest flow, sends the app's keys back to your Worker, which keeps them in its KV namespace, and then asks you to install the app on this repository. From then on `/admin` signs in through your own site, and nothing about it depends on anyone else. Only the owner of the repository named in the editor's config can complete setup, and a token is only ever handed to this site's own origin. If sign-in stops working, open `/auth/setup` again and create a new app.
+
 ## Layout
 
 | Path | What |
@@ -92,3 +96,9 @@ Unchanged from the Sidebar and Desktop templates. `src/worker/` reads the public
 ## Easter eggs
 
 Start → Run takes commands (`help` lists them). Notepad can't save. System Properties counts your words. Leave the desktop alone for two minutes. Log off, stand by, turn it off. Try the Konami code.
+
+## Signing in, the dashboard and updates
+
+- **Editor sign-in.** The editor at `/admin` signs in with GitHub through this site's own Worker (`src/worker/auth.js`), so nothing about signing in depends on the company. The first time, "Sign in with GitHub" opens `/auth/setup`: one click creates a small GitHub App on the owner's account, a second installs it on this repository. "Other sign-in service" under Site settings → Advanced overrides it.
+- **Where the site lives.** Once a day the site tells the company dashboard its address, repository and template (`src/worker/hello.js`), so nobody has to copy it from Cloudflare. Nothing about visitors is sent. Empty "Company dashboard" under Site settings → Advanced turns it off.
+- **Improvements.** Every Monday a GitHub Action (`.github/workflows/update.yml`, `scripts/update-from-template.mjs`) copies in this template's latest changes, leaving `content/`, `public/media/` and `.github/` alone and keeping the site's own Worker name, storage id and package name. It commits only if the site still builds and its tests pass. "Get improvements automatically" under Site settings → Advanced turns it off. Changes made by hand to the site's code outside those folders are replaced by the template's.

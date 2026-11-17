@@ -43,7 +43,10 @@ export const Site = z.object({
   owner: z.string().default(""),
   repo: z.string().default(""),
   authWorker: z.string().default(""),
-  advanced: z.object({ url: z.string().default(""), authWorker: z.string().default(""), owner: z.string().default(""), repo: z.string().default("") }).default({}),
+  // authWorker: another sign-in service, empty for the site's own (src/worker/auth.js). signInHere is
+  // the older switch for the same thing, no longer in the editor. dashboard and autoUpdate are read by
+  // scripts/prepare.mjs and scripts/update-from-template.mjs, not by the pages.
+  advanced: z.object({ url: z.string().default(""), authWorker: z.string().default(""), signInHere: z.boolean().default(false), dashboard: z.string().optional(), autoUpdate: z.boolean().default(true), owner: z.string().default(""), repo: z.string().default("") }).default({}),
 });
 
 export const Now = z.object({

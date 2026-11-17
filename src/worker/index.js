@@ -19,11 +19,19 @@
 // GET  /writing/elsewhere.json         the posts, for the Writing page and the home page
 // GET  /writing/elsewhere/status       the object's report
 // POST /writing/elsewhere/sync         run a sync now
+//
+// And the editor's sign-in: /auth, /callback and /auth/setup (auth.js). The editor's config.yml
+// is stamped like a page so its base_url can be this site's own address.
+//
+// Once a day, after a page has been answered, the site tells the company dashboard where it
+// lives (hello.js). Empty "Company dashboard" in Site settings → Advanced turns that off.
 
 import { coverSource } from "./core/feed.js";
 import { UA } from "./core/sync.js";
 import { allBooks } from "./store.js";
 import { postsName } from "./posts-store.js";
+import { auth } from "./auth.js";
+import { sayHello } from "./hello.js";
 
 export { ShelfSync } from "./sync-object.js";
 export { PostSync } from "./posts-object.js";
@@ -46,7 +54,7 @@ const json = (body, status = 200, cache = "no-store") =>
 // the visitor used. wrangler.jsonc routes only those files through the Worker; images, scripts and
 // the editor are served straight from the assets.
 const ORIGIN_TOKEN = "https://__origin__";
-const STAMPED = /^(text\/html|text\/plain|application\/xml|text\/xml|application\/rss\+xml|application\/ld\+json)/;
+const STAMPED = /^(text\/html|text\/plain|text\/yaml|application\/xml|text\/xml|application\/rss\+xml|application\/ld\+json)/;
 async function stamp(request, res) {
   if (!(res.ok || res.status === 404) || !STAMPED.test(res.headers.get("content-type") || "")) return res;
   const body = await res.text();
@@ -140,8 +148,13 @@ async function image(env, ctx, key, source) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === "/auth" || url.pathname === "/callback" || url.pathname.startsWith("/auth/")) return auth(request, env, url);
     if (url.pathname === `${POSTS}.json` || url.pathname.startsWith(`${POSTS}/`)) return posts(request, env, ctx, url);
-    if (!url.pathname.startsWith(`${BASE}/`)) return stamp(request, await env.ASSETS.fetch(request));
+    if (!url.pathname.startsWith(`${BASE}/`)) {
+      const res = await env.ASSETS.fetch(request);
+      if (request.method === "GET" && res.ok && (res.headers.get("content-type") || "").startsWith("text/html")) ctx.waitUntil(sayHello(request, env));
+      return stamp(request, res);
+    }
     const path = url.pathname.slice(BASE.length).replace(/\/$/, "");
 
     const cover = /^\/covers\/(\d+[a-z]?\/\d+)\.jpg$/.exec(path);
