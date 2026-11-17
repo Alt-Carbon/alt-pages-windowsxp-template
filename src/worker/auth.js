@@ -7,6 +7,9 @@
 // GET  /auth/setup/done       GitHub sends the owner back here with a code; the Worker turns it
 //                             into the app's client id and secret and keeps them in KV
 // GET  /auth/setup/installed  GitHub sends the owner back here after installing the app
+// GET  /auth/status           { ready }: whether the editor can sign in yet. The editor's page
+//                             asks this before loading, and shows its own "set up sign-in
+//                             first" screen until it is true (see public/admin/index.html)
 // GET  /auth?provider=github  the editor opens this in a popup; redirects to GitHub to sign in
 // GET  /callback              GitHub sends the person back here; the token goes to the editor
 //                             by postMessage, to this site's origin only
@@ -88,7 +91,7 @@ ${popupScript(origin, content)}
 </script></body></html>`;
 }
 
-export const SETUP_FIRST = "Sign-in isn't set up for this site yet. Set it up in the window that opened (two clicks on GitHub), then press Sign in with GitHub again.";
+export const SETUP_FIRST = "Sign-in isn't set up for this site yet. Reload this page and press Set up sign-in.";
 
 // The editor's sign-in window when the site has no sign-in app yet: it answers the editor with an
 // error right away (so the editor stops waiting) and offers the setup in a normal tab.
@@ -102,10 +105,13 @@ export function setupNeededHtml(origin) {
 // Where GitHub sends the owner after installing the app.
 export function installedHtml(origin) {
   return page("Sign-in is ready", `<h1>Sign-in is ready</h1>
-<p>Your site can now sign you in to its editor with GitHub.</p>
-<a class="btn" href="${esc(origin)}/admin/">Open your editor</a>
-<p class="muted">Press "Sign in with GitHub" there. If your editor is already open in another tab, press it there instead.</p>`);
+<p>Your site can now sign you in to its editor with GitHub. Go back to your editor's tab: it has noticed, and shows <b>Sign in with GitHub</b>. You can close this tab.</p>
+<a class="btn" href="${esc(origin)}/admin/">Or open the editor here</a>`);
 }
+
+// Ready once the app exists and, for apps made since 17 Nov 2026, once GitHub has said it is
+// installed. Older apps have no "installed" field and were set up by hand: they count as ready.
+export const isReady = (app) => !!app && app.installed !== false;
 
 // --- helpers -------------------------------------------------------------------------------
 
@@ -149,6 +155,14 @@ async function setupPage(request, env, url, note = "") {
 <button type="submit">${app ? "Create a new sign-in app on GitHub" : "Create the sign-in app on GitHub"}</button></form>
 <p class="muted">GitHub shows the app's name and asks you to confirm. You must be signed in to GitHub as <code>${esc(repo.split("/")[0])}</code>, the owner of <code>${esc(repo)}</code>. Afterwards GitHub asks where to install it: choose this site's repository only.</p>`
     : `<p>The site does not know which repository it is built from, so it cannot set up sign-in. Set Advanced → Repository in the editor (or <code>repo</code> in <code>content/site.json</code>) to <code>owner/name</code>, publish, and come back.</p>`;
+  // Created but never installed (the tab was closed on GitHub's install page): finish that first.
+  if (app && app.installed === false && !note) {
+    const install = `https://github.com/apps/${app.slug}/installations/new`;
+    return html(page("Install the sign-in app", `<h1>One step left: install the sign-in app</h1>
+<p>The app <code>${esc(app.slug)}</code> is on your GitHub account. Install it on this site's repository${repo ? `, <code>${esc(repo)}</code>` : ""}, so the editor may read and write your content.</p>
+<a class="btn" href="${install}">Install it</a>
+<p class="muted">GitHub brings you back here afterwards.</p>`), 200, { "set-cookie": setCookie(STATE_COOKIE, state, TEN_MINUTES) });
+  }
   const current = app ? `<p>Sign-in is set up: the GitHub App <a href="${esc(app.html_url || `https://github.com/apps/${app.slug}`)}">${esc(app.slug)}</a>, owned by <code>${esc(app.owner)}</code>. If sign-in has stopped working (for example the app was deleted on GitHub), create a new one; it replaces this one.</p>` : "";
   return html(page("Editor sign-in", `<h1>Editor sign-in for this site</h1>
 <p>The editor at <code>/admin</code> signs in with GitHub. GitHub needs a small app registered for that; this creates one on your own GitHub account, in one step, and keeps its keys in this site's own storage. Nothing about signing in then depends on anyone else.</p>
@@ -177,7 +191,7 @@ async function setupDone(request, env, url) {
   if (!sameLogin(owner, repo.split("/")[0])) {
     return setupPage(request, env, url, `The app was created by ${owner || "someone else"}, but this site's repository belongs to ${repo.split("/")[0] || "an unknown login"}. Delete that app on GitHub and try again signed in as the repository owner.`);
   }
-  await env.BOOKS.put(APP_KEY, JSON.stringify({ client_id: app.client_id, client_secret: app.client_secret, slug: app.slug, owner, html_url: app.html_url, created: new Date().toISOString() }));
+  await env.BOOKS.put(APP_KEY, JSON.stringify({ client_id: app.client_id, client_secret: app.client_secret, slug: app.slug, owner, html_url: app.html_url, created: new Date().toISOString(), installed: false }));
   const install = `https://github.com/apps/${app.slug}/installations/new`;
   return html(page("Sign-in app created", `<h1>The sign-in app is ready</h1>
 <p>GitHub created <a href="${esc(app.html_url || install)}">${esc(app.slug)}</a> on your account and this site now holds its keys.</p>
@@ -231,6 +245,21 @@ async function callback(request, env, url) {
   return popup(origin, { token });
 }
 
+// GitHub adds installation_id and setup_action=install. Anyone could open this address, but all
+// it changes is whether the editor shows "set up sign-in first"; signing in still needs GitHub.
+async function installed(env, url) {
+  const app = await readApp(env);
+  if (app && app.installed === false && url.searchParams.get("installation_id")) {
+    await env.BOOKS.put(APP_KEY, JSON.stringify({ ...app, installed: true, installed_at: new Date().toISOString() }));
+  }
+  return html(installedHtml(url.origin));
+}
+
+async function status(env) {
+  const app = await readApp(env);
+  return new Response(JSON.stringify({ ready: isReady(app), created: !!app }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+}
+
 export async function auth(request, env, url) {
   if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", { status: 405, headers: { allow: "GET" } });
   const path = url.pathname.replace(/\/$/, "");
@@ -238,6 +267,7 @@ export async function auth(request, env, url) {
   if (path === "/callback") return callback(request, env, url);
   if (path === "/auth/setup") return setupPage(request, env, url);
   if (path === "/auth/setup/done") return setupDone(request, env, url);
-  if (path === "/auth/setup/installed") return html(installedHtml(url.origin));
+  if (path === "/auth/setup/installed") return installed(env, url);
+  if (path === "/auth/status") return status(env);
   return new Response("Not found", { status: 404 });
 }

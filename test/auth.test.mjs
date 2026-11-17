@@ -59,6 +59,24 @@ test("/auth with no app yet answers the editor at once and offers the setup in a
   assert.equal(cookieOf(res, "auth-setup-state"), undefined, "no setup is started inside the editor's window");
 });
 
+test("/auth/status tells the editor's page whether sign-in is ready, and installing makes it so", async () => {
+  const status = async (env) => { const r = await run(env, "/auth/status"); assert.equal(r.headers.get("cache-control"), "no-store"); return r.json(); };
+  assert.deepEqual(await status(fakeEnv()), { ready: false, created: false });
+  const env = fakeEnv({ app: { client_id: "c", client_secret: "s", slug: "asha-site-sign-in", owner: "asha", installed: false } });
+  assert.deepEqual(await status(env), { ready: false, created: true }, "created but not installed yet");
+  await run(env, "/auth/setup/installed");
+  assert.deepEqual(await status(env), { ready: false, created: true }, "only GitHub's return, with an installation id, counts");
+  await run(env, "/auth/setup/installed?installation_id=7&setup_action=install");
+  assert.deepEqual(await status(env), { ready: true, created: true });
+  assert.ok(JSON.parse(env.kv.get("auth:app")).installed_at);
+  // Apps set up before the installed flag existed keep working.
+  assert.deepEqual(await status(fakeEnv({ app: { client_id: "c", client_secret: "s" } })), { ready: true, created: true });
+  // Installing again (or any later visit) leaves a ready app alone.
+  const ready = fakeEnv({ app: { client_id: "c", installed: true, installed_at: "then" } });
+  await run(ready, "/auth/setup/installed?installation_id=7");
+  assert.equal(JSON.parse(ready.kv.get("auth:app")).installed_at, "then");
+});
+
 test("/auth/setup shows the manifest form with a state cookie", async () => {
   const res = await run(fakeEnv(), "/auth/setup");
   assert.equal(res.status, 200);
@@ -77,6 +95,7 @@ test("after installing, GitHub comes back to /auth/setup/installed, which leads 
   const body = await res.text();
   assert.ok(body.includes("Sign-in is ready"));
   assert.ok(body.includes(`href="${ORIGIN}/admin/"`));
+  assert.ok(body.includes("Go back to your editor"));
 });
 
 test("/auth with an app redirects to GitHub with a csrf state cookie; /callback checks it", async () => {
@@ -115,5 +134,33 @@ test("/auth/setup without a known repository explains what to set", async () => 
   const res = await run(fakeEnv({ repo: "OWNER/REPO" }), "/auth/setup");
   const body = await res.text();
   assert.ok(body.includes("does not know which repository"));
+  assert.ok(!body.includes("settings/apps/new"));
+});
+
+test("/auth/setup/done keeps the new app's keys, marked not installed until GitHub says so", async () => {
+  const env = fakeEnv();
+  const saved = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    assert.match(String(url), /app-manifests\/abc\/conversions$/);
+    return new Response(JSON.stringify({ client_id: "Iv1.x", client_secret: "sec", slug: "asha-site-sign-in", owner: { login: "Asha" }, html_url: "https://github.com/apps/asha-site-sign-in" }), { status: 201 });
+  };
+  try {
+    const res = await run(env, "/auth/setup/done?code=abc&state=s1", { cookie: "auth-setup-state=s1" });
+    const body = await res.text();
+    assert.ok(body.includes("https://github.com/apps/asha-site-sign-in/installations/new"));
+    const app = JSON.parse(env.kv.get("auth:app"));
+    assert.equal(app.client_id, "Iv1.x");
+    assert.equal(app.installed, false);
+    assert.deepEqual(await (await run(env, "/auth/status")).json(), { ready: false, created: true });
+  } finally {
+    globalThis.fetch = saved;
+  }
+});
+
+test("/auth/setup after creating but not installing goes straight to the install step", async () => {
+  const res = await run(fakeEnv({ app: { client_id: "c", slug: "asha-site-sign-in", owner: "asha", installed: false } }), "/auth/setup");
+  const body = await res.text();
+  assert.ok(body.includes("One step left"));
+  assert.ok(body.includes('href="https://github.com/apps/asha-site-sign-in/installations/new"'));
   assert.ok(!body.includes("settings/apps/new"));
 });

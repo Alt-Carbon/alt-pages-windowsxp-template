@@ -140,10 +140,66 @@
   .app-shell .container > .inner > .buttons .button.secondary { background: transparent !important; border-color: transparent !important; color: hsl(var(--sui-foreground-color-4-hsl)) !important; }
   .app-shell .container > .inner > .buttons .button.secondary:hover { color: hsl(var(--sui-foreground-color-2-hsl)) !important; background: hsl(var(--sui-background-color-3-hsl)) !important; }
   .app-shell .powered-by { font-size: 12px !important; color: hsl(var(--sui-foreground-color-4-hsl)) !important; opacity: .8; }
+
+  /* "First, set up sign-in": shown instead of the editor until the site's sign-in app exists
+     and is installed. Same look as Sveltia's sign-in page. */
+  #setup-first { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: hsl(240 4.8% 95.9%); color: hsl(240 10% 3.9%); font: 14px/1.5 "Geist", system-ui, sans-serif; }
+  #setup-first[hidden] { display: none; }
+  #setup-first .box { max-width: 340px; text-align: center; }
+  #setup-first img { width: 40px; height: 40px; margin: 0 auto 20px; display: block; }
+  #setup-first h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 8px; }
+  #setup-first p { margin: 0 0 20px; color: hsl(240 3.8% 46.1%); text-wrap: pretty; }
+  #setup-first b { color: hsl(240 10% 3.9%); font-weight: 600; }
+  #setup-first a.go { display: flex; align-items: center; justify-content: center; height: 36px; border-radius: 0.5rem; background: #3919A2; color: #fff; font-weight: 600; text-decoration: none; }
+  #setup-first a.go:hover { background: #2d1482; }
+  #setup-first a.go:focus-visible { outline: 2px solid #704BD7; outline-offset: 2px; }
+  #setup-first .wait { margin: 20px 0 0; display: flex; gap: 10px; align-items: flex-start; text-align: left; font-size: 13px; }
+  #setup-first .wait[hidden] { display: none; }
+  #setup-first .dot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: #3919A2; animation: setup-pulse 1.2s ease-in-out infinite; }
+  @keyframes setup-pulse { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { #setup-first .dot { animation: none; } }
+  @media (prefers-color-scheme: dark) {
+    #setup-first { background: hsl(240 10% 3.9%); color: hsl(0 0% 98%); }
+    #setup-first p { color: hsl(240 5% 64.9%); }
+    #setup-first b { color: hsl(0 0% 98%); }
+    #setup-first a.go { background: #704BD7; }
+    #setup-first a.go:hover { background: #8466dd; }
+    #setup-first .dot { background: #704BD7; }
+  }
 </style>
 </head>
 <body>
-<script src="/admin/sveltia-cms.js"></script>
+<div id="setup-first" hidden role="main"><div class="box">
+  <img src="/admin/logo.svg" alt="">
+  <h1>First, set up sign-in</h1>
+  <p>Your site signs you in to this editor by itself. The first time, it needs a small app on your GitHub account: two clicks on GitHub.</p>
+  <a class="go" id="setup-go" href="/auth/setup" target="_blank">Set up sign-in</a>
+  <p class="wait" id="setup-wait" hidden><span class="dot" aria-hidden="true"></span><span>In the new tab, press <b>Create GitHub App</b>, then <b>Install</b>. This page carries on by itself when GitHub is done.</span></p>
+</div></div>
+<script>
+  // Sveltia loads only once this site can sign people in. Before that, its "Sign in with GitHub"
+  // would open a window that has nothing to sign in with. If the site signs in through another
+  // service (base_url elsewhere), or anything here fails, the editor loads as before.
+  (async () => {
+    const start = () => { const s = document.createElement('script'); s.src = '/admin/sveltia-cms.js'; document.body.append(s); };
+    const signsInHere = async () => {
+      try {
+        const yml = await (await fetch('/admin/config.yml', { cache: 'no-store' })).text();
+        const m = /^\s*base_url:\s*["']?([^\s"']+)/m.exec(yml);
+        return !m || new URL(m[1], location.href).origin === location.origin;
+      } catch { return false; }
+    };
+    const ready = async () => {
+      try { const r = await fetch('/auth/status', { cache: 'no-store' }); return !r.ok || (await r.json()).ready === true; } catch { return true; }
+    };
+    if (!(await signsInHere()) || (await ready())) return start();
+    const gate = document.getElementById('setup-first');
+    gate.hidden = false;
+    document.getElementById('setup-go').addEventListener('click', () => { document.getElementById('setup-wait').hidden = false; });
+    const poll = async () => { if (await ready()) { gate.remove(); start(); } else setTimeout(poll, 3000); };
+    setTimeout(poll, 3000);
+  })();
+</script>
 <script>
   // Sidebar navigation while the editor is open. Sveltia marks the page container
   // inert during editing and does not reload the editor when the entry changes, so
