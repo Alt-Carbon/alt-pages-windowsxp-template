@@ -27,7 +27,7 @@
 // lives (hello.js). Empty "Company dashboard" in Site settings → Advanced turns that off.
 
 import { notIfOff } from "./off.js";
-import { coverSource } from "./core/feed.js";
+import { coverSource, resolveProfileName } from "./core/feed.js";
 import { UA } from "./core/sync.js";
 import { allBooks } from "./store.js";
 import { postsName } from "./posts-store.js";
@@ -77,12 +77,26 @@ async function profileId(env, request) {
   let userId = null;
   try {
     const res = await env.ASSETS.fetch(new URL(`${BASE}/config.json`, request.url));
-    if (res.ok) userId = (await res.json()).userId || null;
+    if (res.ok) {
+      const c = await res.json();
+      userId = c.userId || (c.name ? await idForName(env, c.name) : null) || null;
+    }
   } catch {
     /* no config: no profile */
   }
   config = { at: Date.now(), userId };
   return userId;
+}
+
+// A profile given by name (goodreads.com/asharao) when the build could not look up its number:
+// asked of Goodreads once, then kept in KV.
+async function idForName(env, name) {
+  const key = `goodreads:name:${name.toLowerCase()}`;
+  const known = await env.BOOKS.get(key).catch(() => null);
+  if (known) return known;
+  const id = await resolveProfileName(name).catch(() => null);
+  if (id) await env.BOOKS.put(key, id).catch(() => {});
+  return id;
 }
 
 // Which feeds the posts sync follows, from the built config, cached per isolate for a minute.

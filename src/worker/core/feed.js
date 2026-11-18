@@ -10,6 +10,20 @@ export function userIdFrom(input) {
   return m ? m[1] : null;
 }
 
+// A Goodreads address with a name instead of the number, e.g. goodreads.com/asharao. Goodreads
+// forwards it to the numbered profile (resolveProfileName). Null for anything else.
+const NOT_NAMES = new Set(["user", "review", "book", "author", "shelf", "list", "group", "quotes", "genres", "search", "series", "work", "topic", "photo", "blog", "news", "giveaway", "choiceawards", "challenges", "community", "trivia", "quizzes", "friend", "recommendations", "api", "about", "help", "jobs", "sign_in", "sign_up"]);
+export function profileNameFrom(input) {
+  const m = String(input ?? "").trim().match(/^(?:https?:\/\/)?(?:www\.|m\.)?goodreads\.com\/([A-Za-z0-9_.-]+)\/?(?:[?#].*)?$/i);
+  return m && !NOT_NAMES.has(m[1].toLowerCase()) && !/^\d+$/.test(m[1]) ? m[1] : null;
+}
+
+// The profile number a Goodreads name forwards to, or null when it forwards nowhere useful.
+export async function resolveProfileName(name, f = fetch) {
+  const res = await f(`https://www.goodreads.com/${encodeURIComponent(name)}`, { redirect: "manual", headers: { accept: "text/html" } });
+  return /\/user\/show\/(\d+)/.exec(res.headers.get("location") || "")?.[1] || null;
+}
+
 export function feedUrl(userId, shelf = "read", page = 1) {
   const sort = shelf === "read" ? "date_read" : "date_added";
   return `${FEED}${userId}?shelf=${encodeURIComponent(shelf)}&sort=${sort}&order=d&page=${page}`;

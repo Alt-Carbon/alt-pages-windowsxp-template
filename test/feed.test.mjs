@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { feedUrl, parseFeed, reviewText, userIdFrom } from "../src/worker/core/feed.js";
+import { feedUrl, parseFeed, profileNameFrom, resolveProfileName, reviewText, userIdFrom } from "../src/worker/core/feed.js";
 import { syncShelves, FeedError } from "../src/worker/core/sync.js";
 
 const fixture = (name) => readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
@@ -151,4 +151,20 @@ test("parseFeed reads the average rating and review link from a real feed", () =
   assert.ok(books.filter((b) => b.avgRating).length > 90);
   assert.ok(books.every((b) => b.reviewUrl === null || /^https:\/\/www\.goodreads\.com\/review\/show\/\d+$/.test(b.reviewUrl)));
   assert.ok(books.filter((b) => b.reviewUrl).length > 90);
+});
+
+test("a Goodreads address with a name is recognised, and looked up by where Goodreads forwards it", async () => {
+  assert.equal(profileNameFrom("goodreads.com/asharao"), "asharao");
+  assert.equal(profileNameFrom("https://www.goodreads.com/asha.rao/"), "asha.rao");
+  assert.equal(profileNameFrom("goodreads.com/user/show/12345678-asha"), null);
+  assert.equal(profileNameFrom("goodreads.com/book"), null);
+  assert.equal(profileNameFrom("goodreads.com/12345"), null);
+  assert.equal(profileNameFrom("twitter.com/asharao"), null);
+  assert.equal(profileNameFrom(undefined), null);
+  const seen = [];
+  const forward = (to) => async (url, opts) => { seen.push([url, opts.redirect]); return new Response(null, { status: 301, headers: to ? { location: to } : {} }); };
+  assert.equal(await resolveProfileName("asharao", forward("https://www.goodreads.com/user/show/12345678-asha-rao")), "12345678");
+  assert.deepEqual(seen[0], ["https://www.goodreads.com/asharao", "manual"]);
+  assert.equal(await resolveProfileName("nobody", forward(null)), null);
+  assert.equal(await resolveProfileName("elsewhere", forward("https://www.goodreads.com/")), null);
 });
