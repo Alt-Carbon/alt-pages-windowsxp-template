@@ -80,16 +80,20 @@ function popupScript(origin, { token, error, errorCode }) {
     if (data !== "authorizing:github") return;
     if (hasToken && origin !== own) return;
     window.opener?.postMessage(${JSON.stringify(`authorization:github:${state}:`)} + ${JSON.stringify(JSON.stringify(content))}, origin);
+    setTimeout(() => window.close(), 400);
   });
   window.opener?.postMessage("authorizing:github", "*");
 })();`;
 }
 
-// The page the editor's sign-in window ends on.
+// The page the editor's sign-in window ends on. It closes itself once the editor has the answer;
+// if it can't (no editor waiting for it), it says where to go.
 export function popupHtml(origin, content) {
-  return `<!doctype html><html><body><script>
+  return page("Signing you in", `<h1>Signing you in…</h1>
+<p>This window closes by itself. If it stays open, close it and go back to your editor's tab.</p>
+<a class="btn quiet" href="${esc(origin)}/admin/">Open the editor</a>`).replace("</body>", `<script>
 ${popupScript(origin, content)}
-</script></body></html>`;
+</script></body>`);
 }
 
 export const SETUP_FIRST = "Sign-in isn't set up for this site yet. Reload this page and press Set up sign-in.";
@@ -138,16 +142,21 @@ ol{margin:0 0 16px;padding-left:20px;color:var(--muted)}li{margin:4px 0}
 button,a.btn{display:flex;width:100%;align-items:center;justify-content:center;gap:8px;height:44px;margin:18px 0 10px;padding:0 16px;border:0;border-radius:10px;background:var(--accent);color:#fff;font:600 15px/1 inherit;font-family:inherit;cursor:pointer;text-decoration:none}
 button:hover,a.btn:hover{background:var(--accent-hover)}button:focus-visible,a.btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 a.btn.quiet{background:transparent;color:var(--fg);border:1px solid var(--line)}a{color:inherit}
-.muted{font-size:13px}.gh{margin:6px 0 16px;padding:14px 16px;border-radius:12px;background:var(--gh);color:var(--gh-fg);font-size:13px;border:1px solid var(--gh-line)}
-.gh .t{display:block;margin:0 0 10px;color:#8b949e}.gh .press{display:flex;align-items:center;justify-content:center;height:32px;border-radius:6px;background:var(--gh-green);color:#fff;font-weight:600;box-shadow:0 0 0 3px rgba(112,75,215,.55)}
-.gh .radio{display:flex;align-items:center;gap:8px;margin:0 0 10px}.gh .radio i{width:12px;height:12px;border-radius:50%;border:3.5px solid #2f81f7}
+.muted{font-size:13px}.next{margin:2px 0 8px;font-size:13px}
+.gh{margin:0 0 16px;border-radius:10px;overflow:hidden;background:var(--gh);color:var(--gh-fg);font-size:12.5px;border:1px solid var(--gh-line);user-select:none;pointer-events:none}
+.gh .bar{display:flex;align-items:center;gap:5px;height:24px;padding:0 10px;background:#161b22;border-bottom:1px solid var(--gh-line);color:#8b949e;font-size:11px}.gh .bar i{width:7px;height:7px;border-radius:50%;background:#30363d}.gh .bar span{margin-left:6px}
+.gh .body{display:grid;justify-items:start;gap:10px;padding:14px 16px 18px}.gh .t{color:#8b949e}
+.gh .press{position:relative;display:inline-flex;align-items:center;height:28px;padding:0 12px;border-radius:6px;background:var(--gh-green);color:#fff;font-weight:600}.gh .press svg{position:absolute;right:-12px;bottom:-14px;width:18px;height:18px}
+.gh .radio{display:flex;align-items:center;gap:8px}.gh .radio i{width:12px;height:12px;border-radius:50%;border:3.5px solid #2f81f7}
 details{margin-top:18px;font-size:13px;color:var(--muted)}summary{cursor:pointer;font-weight:500}details p{margin-top:8px;font-size:13px}
 .ok{display:grid;place-items:center;width:44px;height:44px;margin:0 0 18px;border-radius:50%;background:#16a34a;color:#fff;font-size:22px}
 </style></head><body><main>${body}</main></body></html>`;
 // Two bars: create, then install. n is the step being done; 3 means both are done.
 const steps = (n) => `<div class="steps" aria-hidden="true">${[1, 2].map((i) => `<span class="${i < n ? "done" : i === n ? "on" : ""}"></span>`).join("")}</div>`;
-// A small picture of the GitHub button to press next.
-const ghPicture = (title, button, radio = "") => `<div class="gh" aria-hidden="true"><span class="t">${title}</span>${radio ? `<div class="radio"><i></i>${radio}</div>` : ""}<div class="press">${button}</div></div>`;
+// What GitHub will show next: a small picture of its page with the button to press, under our own
+// button and drawn as a GitHub window (not a button) so nobody tries to press it here.
+const POINTER = '<svg viewBox="0 0 24 24"><path d="M4 2l16 11-7 1.5 4 7.5-3 1.5-4-7.5L4 21z" fill="#fff" stroke="#111" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+const ghPicture = (title, button, radio = "") => `<p class="next">Then, on GitHub:</p><div class="gh" aria-hidden="true"><div class="bar"><i></i><i></i><i></i><span>github.com</span></div><div class="body"><span class="t">${title}</span>${radio ? `<div class="radio"><i></i>${radio}</div>` : ""}<span class="press">${button}${POINTER}</span></div></div>`;
 
 async function readApp(env) {
   try {
@@ -180,8 +189,8 @@ async function setupPage(request, env, url, note = "") {
     const install = `https://github.com/apps/${app.slug}/installations/new`;
     return html(page("Install the sign-in app", `${steps(2)}<p class="eyebrow">Step 2 of 2</p><h1>Install the sign-in app</h1>
 <p>The app <b>${esc(app.slug)}</b> is on your GitHub account. Install it so your editor can save your changes${repo ? ` to <code>${esc(repo)}</code>` : ""}.</p>
-${ghPicture(`On GitHub: Install ${esc(app.slug)}`, "Install", "All repositories")}
-<a class="btn" href="${install}">Install on GitHub</a>
+<a class="btn" href="${install}">Continue to GitHub</a>
+${ghPicture(`Install ${esc(app.slug)}`, "Install", "All repositories")}
 <p class="muted">GitHub brings you back here afterwards.</p>`), 200, { "set-cookie": setCookie(STATE_COOKIE, state, TEN_MINUTES) });
   }
   if (!repo) {
@@ -195,11 +204,10 @@ ${ghPicture(`On GitHub: Install ${esc(app.slug)}`, "Install", "All repositories"
     ? `<h1>Sign-in is already set up</h1>
 <p>This site signs in with the GitHub app <a href="${esc(app.html_url || `https://github.com/apps/${app.slug}`)}">${esc(app.slug)}</a>, owned by <b>${esc(app.owner)}</b>. Only make a new one if signing in has stopped working, for example because the app was deleted on GitHub. The new one replaces it.</p>`
     : `${steps(1)}<p class="eyebrow">Step 1 of 2</p><h1>Set up sign-in for your editor</h1>
-<p>Your site signs you in to its editor with your GitHub account. For that, it needs a small app of its own on your GitHub. GitHub makes it for you:</p>
-<ol><li>Press <b>Continue to GitHub</b> below.</li><li>On GitHub, press the green <b>Create GitHub App</b> button.</li></ol>
-${ghPicture("On GitHub: Create GitHub App", `Create GitHub App for ${esc(owner)}`)}`;
+<p>Your site needs a small app on your GitHub to sign you in. GitHub makes it for you in one press.</p>`;
   return html(page("Editor sign-in", `${intro}
 ${note ? `<p><b>${esc(note)}</b></p>` : ""}${form}
+${app ? "" : ghPicture("Create GitHub App", `Create GitHub App for ${esc(owner)}`)}
 <p class="muted">Sign in to GitHub as <b>${esc(owner)}</b> first: the app must belong to whoever owns <code>${esc(repo)}</code>.</p>
 <details><summary>What is this app?</summary><p>A private GitHub app that only you can use. It may read and change files in the repository you install it on, which is what your editor does when you press Publish. Its keys are kept in your site's own storage on your Cloudflare account; nothing about signing in depends on Alt Carbon.</p></details>`), 200, { "set-cookie": setCookie(STATE_COOKIE, state, TEN_MINUTES) });
 }
@@ -232,8 +240,8 @@ async function setupDone(request, env, url) {
   const install = `https://github.com/apps/${app.slug}/installations/new`;
   return html(page("Install the sign-in app", `${steps(2)}<p class="eyebrow">Step 2 of 2</p><h1>Now install it</h1>
 <p>GitHub made <b>${esc(app.slug)}</b>. One more press: install it so your editor can save your changes to <code>${esc(repo)}</code>.</p>
-${ghPicture(`On GitHub: Install ${esc(app.slug)}`, "Install", "All repositories")}
 <a class="btn" href="${install}">Continue to GitHub</a>
+${ghPicture(`Install ${esc(app.slug)}`, "Install", "All repositories")}
 <p class="muted">All repositories is fine: the app is yours alone. To be strict, choose <b>Only select repositories</b> and pick <code>${esc(repo)}</code>. GitHub brings you back afterwards.</p>`), 200, { "set-cookie": setCookie(STATE_COOKIE, "deleted", 0) });
 }
 
