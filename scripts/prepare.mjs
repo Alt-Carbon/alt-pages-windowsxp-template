@@ -255,3 +255,9 @@ collections:
 write("public/admin/config.yml", config);
 const feeds = Object.values(postSources).filter(Boolean).map((s) => s.feed).join(" ") || "(none)";
 console.log(`prepare: repo ${repo || "(unknown)"}, owner ${owner || "(unknown)"}, goodreads ${goodreadsId || "(none)"}, posts ${feeds}, editor config written`);
+
+// The owner's own styles: content/custom.css, loaded after the template's styles on every page, so
+// it wins. It lives in content/, which template updates never touch. Sites made before it existed
+// have no such file; they get an empty one, so the page's <link> always finds something.
+const CUSTOM_CSS = existsSync("content/custom.css") ? readFileSync("content/custom.css", "utf8") : "/* Your own styles go in content/custom.css. */\n";
+writeFileSync("public/custom.css", CUSTOM_CSS);

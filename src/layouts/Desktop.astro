@@ -83,6 +83,8 @@ const year = st.installed.slice(-4);
 <link rel="alternate" type="application/json" href="/reading/view.json" title="Reading">
 </head>
 <body data-window={open} data-piece={essay?.slug}>
+  <!-- The owner's content/custom.css: first in the body, so it comes after every stylesheet Astro adds to the head (and wins), yet still loads before anything is drawn. -->
+  <link rel="stylesheet" href="/custom.css" />
 <div id="boot" hidden aria-hidden="true"><div class="bl"><small>Starting</small><b>{first}<i>xp</i></b><div class="bar"><i></i><i></i><i></i></div></div><span class="cp">{first} XP · Version {year} · Everything here is text.</span></div>
 <div id="welcome" hidden>
   <div class="wl"><b>welcome</b><p>To begin, click your name</p></div>
