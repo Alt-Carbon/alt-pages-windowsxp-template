@@ -1,10 +1,11 @@
-// Every page, for search engines. Pieces published elsewhere are left out.
+// Every page, for search engines: the menu's pages (the owner's own included) and the pieces of writing.
+// Pages switched off or empty, and pieces published elsewhere, are left out.
 import type { APIRoute } from "astro";
-import { freshness, menu, now, origin, writing } from "../lib/content";
+import { freshness, menu, now, origin, shown, writing } from "../lib/content";
 
 export const GET: APIRoute = async ({ url }) => {
   const base = origin(url);
-  const posts = await writing();
+  const posts = (await shown()).has("writing") ? await writing() : [];
   const fresh = await freshness();
   const day = (d: Date) => d.toISOString().slice(0, 10);
   const urls: [string, string | undefined][] = [

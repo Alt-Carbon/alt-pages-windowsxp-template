@@ -2,28 +2,32 @@
 // Every page is the whole desktop with one window open. Each window's content is in the HTML, so the
 // page reads as an ordinary page without JavaScript (and to search engines); the script then turns it
 // into the desktop (src/scripts/xp/main.js). `open` is the window this address is for.
+import { render } from "astro:content";
 import "winbox/dist/css/winbox.min.css";
 import "../styles/xp.css";
 import Journal from "../components/Journal.astro";
 import Research from "../components/Research.astro";
 import Reading from "../components/Reading.astro";
-import { about, currentRole, origin, owner, pages, reading, repo, shown, site, template } from "../lib/content";
-import { aboutText, deskData, first, icons, nowText, stats } from "../lib/desktop";
+import { about, currentRole, origin, owner, ownPages, pages, repo, shown, site, switchedOff, template } from "../lib/content";
+import { aboutText, deskData, first, home, icons, nowText, stats } from "../lib/desktop";
 
 interface Props {
-  page: string;            // for SEO: home, about, now, writing, essay, research, reading, 404
-  open: string;            // the window to open: about, now, writing, research, reading, or "" for none
+  page: string;            // for SEO: home, about, now, writing, essay, research, reading, 404, page:<slug>
+  open: string;            // the window to open: about, now, writing, research, reading, page-<slug>, or "" for none
   title?: string;
   description?: string;
   image?: string;
   published?: Date;
   essay?: { slug: string; Content: any };
+  off?: boolean;           // switched off by the owner; defaults to what the content says for `page`
 }
 const { page, open, title, description, image = `/og/${page === "404" ? "home" : page === "essay" ? "home" : page}.png`, published, essay } = Astro.props;
 
 // ---- head: the same SEO the Sidebar template writes, from the content
 const on = await shown();
-const hidden = pages.some((p) => p.id === page && !on.has(p.id));
+// Switched off by the owner: the Worker answers "not found" for it (the alt-pages-off marker below).
+const off = Astro.props.off ?? switchedOff(page);
+const hidden = off || pages.some((p) => p.id === page && !on.has(p.id));
 const fullTitle = title ? `${title} · ${site.name}` : site.name;
 const desc = description || `${site.oneLiner} ${site.intro}`.trim();
 const base = origin(Astro.url);
@@ -31,7 +35,7 @@ const path = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/") 
 const url = base + path;
 const img = base + image;
 const sameAs = site.social.map((l) => l.url).filter((u) => /^https?:/.test(u));
-const person = { "@type": "Person", name: site.name, url: `${base}/about`, ...(site.photo && { image: base + site.photo }), ...(about.shortBio && { description: about.shortBio }), ...(currentRole ? { jobTitle: currentRole.role, worksFor: { "@type": "Organization", name: currentRole.org, ...(currentRole.orgUrl && { url: currentRole.orgUrl }) } } : site.employer && { worksFor: { "@type": "Organization", name: site.employer, ...(site.employerUrl && { url: site.employerUrl }) } }), ...(sameAs.length && { sameAs }) };
+const person = { "@type": "Person", name: site.name, url: on.has("about") ? `${base}/about` : `${base}/`, ...(site.photo && { image: base + site.photo }), ...(about.shortBio && { description: about.shortBio }), ...(currentRole ? { jobTitle: currentRole.role, worksFor: { "@type": "Organization", name: currentRole.org, ...(currentRole.orgUrl && { url: currentRole.orgUrl }) } } : site.employer && { worksFor: { "@type": "Organization", name: site.employer, ...(site.employerUrl && { url: site.employerUrl }) } }), ...(sameAs.length && { sameAs }) };
 const ld = page === "essay"
   ? { "@context": "https://schema.org", "@type": "BlogPosting", headline: title, description: desc, url, image: img, datePublished: published?.toISOString().slice(0, 10), author: person }
   : page === "about" ? { "@context": "https://schema.org", "@type": "ProfilePage", url, mainEntity: person }
@@ -44,8 +48,12 @@ const data = await deskData();
 const st = await stats();
 const social = site.social.map((l) => ({ ...l, web: /^https?:/.test(l.url) }));
 const show = (k: string) => open === k;
+const start = await home();
+// The owner's own pages that are on, each a window of its own; one that is off only on its own address.
+const mine = await Promise.all((await ownPages()).filter((p) => p.data.show || open === `page-${p.id}`)
+  .map(async (p) => ({ p, Content: (await render(p)).Content })));
 // What the Start menu says under each program, the way XP named the app beneath the document.
-const APP: Record<string, string> = { txt: "Notepad", journal: "Journal", folder: "Explorer", books: "Bookshelf" };
+const APP: Record<string, string> = { txt: "Notepad", journal: "Journal", folder: "Explorer", books: "Bookshelf", doc: "WordPad" };
 const initial = first.slice(0, 1).toUpperCase();
 const year = st.installed.slice(-4);
 ---
@@ -60,6 +68,7 @@ const year = st.installed.slice(-4);
 <meta name="description" content={desc}>
 <meta name="author" content={site.name}>
 {hidden && <meta name="robots" content="noindex">}
+{off && <meta name="alt-pages-off" content="">}
 {page !== "404" && <link rel="canonical" href={url}>}
 <meta property="og:site_name" content={site.name}>
 <meta property="og:title" content={title || site.name}>
@@ -74,21 +83,21 @@ const year = st.installed.slice(-4);
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="alternate" type="application/rss+xml" href="/rss.xml" title={`${site.name}: writing`}>
+{on.has("writing") && <link rel="alternate" type="application/rss+xml" href="/rss.xml" title={`${site.name}: writing`}>}
 <link rel="sitemap" type="application/xml" href="/sitemap.xml">
 {ld && <script type="application/ld+json" set:html={JSON.stringify(ld).replace(/</g, "\\u003c")} />}
 <meta name="portfolio-template" content={`${template.name}@${template.version}`}>
 {owner && <meta name="portfolio-owner" content={owner}>}
 {repo && <meta name="portfolio-repo" content={repo}>}
-<link rel="alternate" type="application/json" href="/reading/view.json" title="Reading">
+{on.has("reading") && <link rel="alternate" type="application/json" href="/reading/view.json" title="Reading">}
 </head>
-<body data-window={open} data-piece={essay?.slug}>
+<body data-window={open} data-piece={essay?.slug} data-home={start.key || undefined} data-notfound={page === "404" ? "" : undefined}>
   <!-- The owner's content/custom.css: first in the body, so it comes after every stylesheet Astro adds to the head (and wins), yet still loads before anything is drawn. -->
   <link rel="stylesheet" href="/custom.css" />
 <div id="boot" hidden aria-hidden="true"><div class="bl"><small>Starting</small><b>{first}<i>xp</i></b><div class="bar"><i></i><i></i><i></i></div></div><span class="cp">{first} XP · Version {year} · Everything here is text.</span></div>
 <div id="welcome" hidden>
   <div class="wl"><b>welcome</b><p>To begin, click your name</p></div>
-  <div class="wr"><button class="tile" type="button">{site.photo ? <img src={site.photo} alt="" width="48" height="48"> : <span class="pic user"></span>}<span>{site.name}<small>{st.pieces > 0 ? `${st.pieces} ${st.pieces === 1 ? "piece" : "pieces"} of writing` : site.oneLiner}</small></span></button></div>
+  <div class="wr"><button class="tile" type="button">{site.photo ? <img src={site.photo} alt="" width="48" height="48"> : <span class="pic user"></span>}<span>{site.name}<small>{on.has("writing") && st.pieces > 0 ? `${st.pieces} ${st.pieces === 1 ? "piece" : "pieces"} of writing` : site.oneLiner}</small></span></button></div>
   <div class="wf"><span>After you sign in, you can read everything, change nothing, and keep notes of your own.</span><span>{first} XP</span></div>
 </div>
 <div id="off" hidden></div>
@@ -148,19 +157,23 @@ const year = st.installed.slice(-4);
 </div>
 
 <main id="store">
-  <div class="winbody app-notepad" id="body-about" data-app="notepad" data-title="about.txt - Notepad" data-path="/about" hidden={!show("about")}>
-    <h1 class="vh">About {site.name}</h1>
-    <pre class="np" contenteditable="true" spellcheck="false">{aboutText()}</pre>
-  </div>
+  {on.has("about") && (
+    <div class="winbody app-notepad" id="body-about" data-app="notepad" data-title="about.txt - Notepad" data-path="/about" hidden={!show("about")}>
+      <h1 class="vh">About {site.name}</h1>
+      <pre class="np" contenteditable="true" spellcheck="false">{aboutText()}</pre>
+    </div>
+  )}
   {on.has("now") && (
     <div class="winbody app-notepad" id="body-now" data-app="notepad" data-title="now.txt - Notepad" data-path="/now" hidden={!show("now")}>
       <h1 class="vh">Now</h1>
       <pre class="np" contenteditable="true" spellcheck="false">{nowText()}</pre>
     </div>
   )}
-  <div class="winbody app-journal" id="body-writing" data-app="journal" data-title="Writing" data-path="/writing" hidden={!show("writing")}>
-    <Journal essay={essay} />
-  </div>
+  {on.has("writing") && (
+    <div class="winbody app-journal" id="body-writing" data-app="journal" data-title="Writing" data-path="/writing" hidden={!show("writing")}>
+      <Journal essay={essay} />
+    </div>
+  )}
   {on.has("research") && (
     <div class="winbody app-explorer" id="body-research" data-app="explorer" data-title="Research" data-path="/research" hidden={!show("research")}>
       <Research />
@@ -171,6 +184,15 @@ const year = st.installed.slice(-4);
       <Reading />
     </div>
   )}
+  {mine.map(({ p, Content }) => (
+    <div class="winbody app-doc" id={`body-page-${p.id}`} data-app="doc" data-title={`${p.data.title} - WordPad`} data-name={p.data.title} data-path={`/${p.id}`} hidden={!show(`page-${p.id}`)}>
+      <article class="essay own">
+        <h1 class="doc-title">{p.data.title}</h1>
+        {p.data.photo && <img class="own-photo" src={p.data.photo} alt="" width="400" height="400">}
+        <Content />
+      </article>
+    </div>
+  ))}
   <div class="winbody app-sys" id="body-computer" data-app="sys" data-title="System Properties" hidden>
     <div class="sys">
       {site.photo ? <img class="sysico photo" src={site.photo} alt="" width="64" height="64"> : <div class="sysico pic pc"></div>}
@@ -179,9 +201,9 @@ const year = st.installed.slice(-4);
         <dt>Registered to</dt><dd>{site.name}{data.city && <><br>{data.city}</>}</dd>
         <dt>Installed</dt><dd>{st.installed}</dd>
         <dt>Last updated</dt><dd>{st.updated}</dd>
-        {st.pieces > 0 && <><dt>Writing</dt><dd>{st.pieces} {st.pieces === 1 ? "piece" : "pieces"}, {st.words.toLocaleString("en")} words</dd></>}
-        {st.research > 0 && <><dt>Research</dt><dd>{st.research} {st.research === 1 ? "item" : "items"}</dd></>}
-        <dt>Books read</dt><dd data-books>…</dd>
+        {on.has("writing") && st.pieces > 0 && <><dt>Writing</dt><dd>{st.pieces} {st.pieces === 1 ? "piece" : "pieces"}, {st.words.toLocaleString("en")} words</dd></>}
+        {on.has("research") && st.research > 0 && <><dt>Research</dt><dd>{st.research} {st.research === 1 ? "item" : "items"}</dd></>}
+        {on.has("reading") && <><dt>Books read</dt><dd data-books>…</dd></>}
         <dt>Uptime</dt><dd><span data-uptime>0 min</span></dd>
         <dt>Memory</dt><dd>Enough. Everything here is text.</dd>
       </dl>

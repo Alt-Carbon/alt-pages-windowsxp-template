@@ -2,7 +2,7 @@
 // use: the plain text Notepad shows for About and Now, the icons, the facts in System Properties, and
 // the small piece of data the page's script reads (src/scripts/desktop/main.js).
 import { readdirSync } from "node:fs";
-import { about, accent, day, freshness, now, research, shown, site, writing, writingPage, years } from "./content";
+import { about, accent, day, freshness, now, ownPages, research, shown, site, writing, writingPage, years } from "./content";
 import { WALLPAPERS } from "./schemas";
 
 export const first = site.name.trim().split(/\s+/)[0] || site.name;
@@ -45,21 +45,33 @@ export type Icon = { key: string; label: string; ico: string; href?: string; doc
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
 
 // Desktop icons in order. A window whose page is switched off or empty has no icon. Pinned pieces of
-// writing get an icon of their own. My Computer has no page, so no address.
+// writing get an icon of their own, and so does each of the owner's own pages (content/pages) that is
+// on, by title. My Computer has no page, so no address.
 export async function icons(): Promise<Icon[]> {
   const on = await shown();
   const posts = await writing();
-  const list: Icon[] = [{ key: "about", label: "about.txt", ico: "txt", href: "/about" }];
+  const list: Icon[] = [];
+  if (on.has("about")) list.push({ key: "about", label: "about.txt", ico: "txt", href: "/about" });
   if (on.has("writing")) list.push({ key: "writing", label: "Writing", ico: "journal", href: "/writing" });
   if (on.has("research")) list.push({ key: "research", label: "Research", ico: "folder", href: "/research" });
   if (on.has("reading")) list.push({ key: "reading", label: "Reading", ico: "books", href: "/reading" });
   if (on.has("now")) list.push({ key: "now", label: "now.txt", ico: "txt", href: "/now" });
-  for (const slug of site.desktop.pinned) {
+  for (const slug of on.has("writing") ? site.desktop.pinned : []) {
     const p = posts.find((x) => x.id === slug && !x.data.link);
     if (p) list.push({ key: "writing", label: clip(p.data.title, 24), full: p.data.title, ico: "txt", href: `/writing/${p.id}`, doc: p.id });
   }
+  for (const p of (await ownPages()).filter((p) => p.data.show)) {
+    list.push({ key: `page-${p.id}`, label: clip(p.data.title, 24), full: p.data.title, ico: "doc", href: `/${p.id}` });
+  }
   list.push({ key: "computer", label: "My Computer", ico: "pc" });
   return list;
+}
+
+// The window the desktop opens on at /: about.txt, or with About switched off the first page that is
+// on. "" when there is none, and then the desktop opens with no window.
+export async function home(): Promise<{ key: string; label: string }> {
+  const first = (await icons()).find((ic) => ic.href && !ic.doc);
+  return first ? { key: first.key, label: first.full || first.label } : { key: "", label: "" };
 }
 
 // System Properties: a few true numbers about the site.
@@ -87,7 +99,8 @@ export function photos(): Record<string, string> {
 
 // What the page's script needs that isn't in the markup.
 export async function deskData() {
-  const posts = await writing();
+  // With Writing off, nothing of it reaches the page: no screensaver titles, no "new piece" notice.
+  const posts = (await shown()).has("writing") ? await writing() : [];
   const d = site.desktop;
   return {
     name: site.name, first, greeting: site.greeting, oneLiner: site.oneLiner,
@@ -97,5 +110,6 @@ export async function deskData() {
     titles: posts.map((p) => p.data.title),
     writing: posts.map((p) => ({ slug: p.id, title: p.data.title, date: p.data.date.toISOString().slice(0, 10), link: p.data.link || "" })),
     hide: writingPage.hide,   // Medium or Substack posts to leave out of the journal
+    pages: (await ownPages()).filter((p) => p.data.show).map((p) => ({ key: `page-${p.id}`, slug: p.id, title: p.data.title })),   // for Run…
   };
 }

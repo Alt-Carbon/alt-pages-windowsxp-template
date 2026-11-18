@@ -1,0 +1,12 @@
+---
+// Your pages (content/pages/*.md, made in the editor under Your pages): the desktop with that page open
+// in a window of its own. A page switched off is still built, but its address answers "not found".
+import Desktop from "../layouts/Desktop.astro";
+import { ownPages, summary } from "../lib/content";
+
+export async function getStaticPaths() {
+  return (await ownPages()).map((p) => ({ params: { page: p.id }, props: { entry: p } }));
+}
+const { entry } = Astro.props;
+---
+<Desktop page={`page:${entry.id}`} open={`page-${entry.id}`} title={entry.data.title} description={entry.data.description || summary(entry) || undefined} image="/og/home.png" off={!entry.data.show} />

@@ -105,9 +105,10 @@ export const pages = [
 // sitemap, so a new site starts as Home and About and grows as its owner adds things. Now is the
 // exception: it is never empty, only stale, so it has its own switch in the editor.
 export async function shown(): Promise<Set<string>> {
-  const on = new Set(["about"]);
-  if ((await writing()).length || elsewhere) on.add("writing"); // posts from Medium or Substack fill it too
-  if (research.items.length) on.add("research");
+  const on = new Set<string>();
+  if (about.show) on.add("about");
+  if (writingPage.show && ((await writing()).length || elsewhere)) on.add("writing"); // posts from Medium or Substack fill it too
+  if (research.show && research.items.length) on.add("research");
   if (reading.show) on.add("reading"); // a sample shelf shows until a Goodreads profile is connected
   if (now.show) on.add("now");
   return on;
@@ -119,9 +120,35 @@ export const years = (e: { start: string; end: string }) => {
   return a === b ? a : `${a} – ${b}`;
 };
 
+// Pages the owner switched off (as opposed to empty ones): their addresses answer "not found".
+export function switchedOff(page: string): boolean {
+  if (page === "about") return !about.show;
+  if (page === "writing") return !writingPage.show;
+  if (page === "research") return !research.show;
+  if (page === "reading") return !reading.show;
+  if (page === "now") return !now.show;
+  return false;
+}
+
+// Your pages (content/pages/*.md). A name the template already uses for an address is left out,
+// with a note in the build log, so it can't hide a built-in page.
+const TAKEN = new Set([...pages.map((p) => p.id), "admin", "auth", "callback", "media", "og", "writing", "reading", "hello", "posts", "board", "rss.xml", "sitemap.xml", "robots.txt", "404", "custom.css", "favicon.svg"]);
+export async function ownPages() {
+  const all = await getCollection("pages");
+  for (const p of all) {
+    p.data.title = smart(p.data.title);
+    if (TAKEN.has(p.id)) console.warn(`content/pages/${p.id}.md: "${p.id}" is already an address on this site, so this page is left out. Rename the file.`);
+  }
+  return all.filter((p) => !TAKEN.has(p.id)).sort((a, b) => a.data.title.localeCompare(b.data.title));
+}
+
+// The menu: the template's pages that are on, then your pages that are on, About last.
 export async function menu() {
   const on = await shown();
-  return pages.filter((p) => on.has(p.id));
+  const mine = (await ownPages()).filter((p) => p.data.show).map((p) => ({ id: `page:${p.id}`, label: p.data.title, href: `/${p.id}` }));
+  const built = pages.filter((p) => on.has(p.id));
+  const about = built.filter((p) => p.id === "about");
+  return [...built.filter((p) => p.id !== "about"), ...mine, ...about];
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

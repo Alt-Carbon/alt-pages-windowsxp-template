@@ -1,8 +1,9 @@
 ---
-// One piece of writing, open in the journal. Pieces published elsewhere have no page here.
+// One piece of writing, open in the journal. Pieces published elsewhere have no page here. With the
+// Writing page switched off, every piece's address answers "not found" too.
 import { render } from "astro:content";
 import Desktop from "../../layouts/Desktop.astro";
-import { summary, writing } from "../../lib/content";
+import { summary, switchedOff, writing } from "../../lib/content";
 
 export async function getStaticPaths() {
   const posts = await writing();
@@ -11,4 +12,4 @@ export async function getStaticPaths() {
 const { post } = Astro.props;
 const { Content } = await render(post);
 ---
-<Desktop page="essay" open="writing" title={post.data.title} description={summary(post)} image={`/og/writing/${post.id}.png`} published={post.data.date} essay={{ slug: post.id, Content }} />
+<Desktop page="essay" open="writing" title={post.data.title} description={summary(post)} image={`/og/writing/${post.id}.png`} published={post.data.date} essay={{ slug: post.id, Content }} off={switchedOff("writing")} />

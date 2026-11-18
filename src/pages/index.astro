@@ -1,5 +1,6 @@
 ---
-// The desktop, with about.txt open in Notepad.
+// The desktop, with about.txt open in Notepad (or, with About switched off, the first page that is on).
 import Desktop from "../layouts/Desktop.astro";
+import { home } from "../lib/desktop";
 ---
-<Desktop page="home" open="about" />
+<Desktop page="home" open={(await home()).key} />

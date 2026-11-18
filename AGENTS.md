@@ -21,7 +21,9 @@ So a change anywhere else, such as `src/`, `public/` or `scripts/`, is undone at
 | The owner wants | Change | Survives updates |
 |---|---|---|
 | Colours, fonts, sizes, spacing, hiding something | `content/custom.css` | Yes |
-| Words, links, photos, which pages show | `content/*.json`, `content/writing/*.md`, or the editor at `/admin` | Yes |
+| Words, links, photos | `content/*.json`, `content/writing/*.md`, or the editor at `/admin` | Yes |
+| Hiding a page | its `"show": false` (`content/about.json`, `writing.json`, `research.json`, `reading.json`, `now.json`), or the page's switch in the editor | Yes |
+| A new page (Projects, Talks…) | a Markdown file in `content/pages/` (`title`, optional `show`, `photo`, `description`, then the text), or Your pages in the editor | Yes |
 | A setting the template already has (accent colour, …) | `content/site.json`, or the editor | Yes |
 | A different layout or new behaviour | `src/` | **No**, see below |
 

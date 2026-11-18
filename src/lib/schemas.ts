@@ -58,6 +58,7 @@ export const Now = z.object({
 
 const month = z.string().regex(/^\d{4}-\d{2}$/, "month must be YYYY-MM");
 export const About = z.object({
+  show: z.boolean().default(true),
   paragraphs: z.array(z.string()),
   // Work history, newest first. An entry with no end date is the current role.
   experience: z.array(z.object({
@@ -96,9 +97,12 @@ export const Reading = z.object({
 
 // The Writing page itself (its pieces are content/writing/*.md). `hide` lists the addresses of
 // Medium or Substack posts to leave off the page.
-export const WritingPage = z.object({ intro: z.string().default(""), hide: z.array(z.string()).default([]) });
+// show: the page switch in the editor. On by default; off leaves it out of the menu and the home page,
+// and its address answers "not found" (see src/lib/content.ts and the Worker).
+export const WritingPage = z.object({ show: z.boolean().default(true), intro: z.string().default(""), hide: z.array(z.string()).default([]) });
 
 export const Research = z.object({
+  show: z.boolean().default(true),
   intro: z.string().default(""),
   items: z.array(z.object({
     title: z.string().min(1),

@@ -250,12 +250,15 @@ const wins = {};
 // Each kind of window opens as a share of the desk (width, height), up to a cap in pixels, and sits in
 // the middle of the desk. One window shows at a time: opening or restoring one puts the others in the
 // taskbar, so each app gets the whole desk and the visitor never hunts under a pile.
-const SIZES = { notepad: [.62, .9, 880, 960], explorer: [.64, .76, 920, 760], journal: [.84, .92, 1260, 1000], reading: [.9, .94, 1440, 1100], sys: [.4, .56, 500, 520], dlg: [.3, .25, 380, 200] };
+const SIZES = { notepad: [.62, .9, 880, 960], doc: [.62, .9, 880, 960], explorer: [.64, .76, 920, 760], journal: [.84, .92, 1260, 1000], reading: [.9, .94, 1440, 1100], sys: [.4, .56, 500, 520], dlg: [.3, .25, 380, 200] };
 const ICON_OF = { about: "txt", now: "txt", writing: "journal", research: "folder", reading: "books", computer: "pc" };
+// A window's content, by key. By id, not a selector: an own page's key is its file name (page-<name>).
+const bodyOf = (key) => document.getElementById("body-" + key);
+const has = (key) => !!bodyOf(key);   // false when that page is switched off or empty
 function solo(keep) { for (const w of Object.values(wins)) if (w !== keep && w.app !== "dlg" && !w.min) w.minimize(); }
 function open(key, opts = {}) {
   if (wins[key]) { const w = wins[key]; solo(w); if (w.min) w.restore(); w.focus(); return w; }
-  const el = $("#body-" + key); if (!el) return;
+  const el = bodyOf(key); if (!el) return;
   const app = el.dataset.app, [fw, fh, capW, capH] = SIZES[app] || SIZES.explorer;
   const deskW = innerWidth, deskH = innerHeight - TASK_H;
   const w = Math.min(Math.round(deskW * fw), capW, deskW - 24), h = Math.min(Math.round(deskH * fh), capH, deskH - 24);
@@ -264,7 +267,7 @@ function open(key, opts = {}) {
   solo(null);
   el.hidden = false;
   if (app === "notepad" && !el.dataset.ready) { el.dataset.ready = "1"; el.prepend(notepadMenu(el, key)); }
-  $(`.icon[data-open="${key}"]`)?.classList.remove("new");
+  $(`.icon[data-open="${CSS.escape(key)}"]`)?.classList.remove("new");
   if (app === "journal" && !el.journal) el.journal = initJournal(el);
   if (app === "reading" && !el.ready) el.ready = initReading(el);
   const wb = new WinBox({
@@ -279,19 +282,20 @@ function open(key, opts = {}) {
   taskbar(); route();
   return wb;
 }
-// Each window has a page of its own (/about, /now, /writing/<slug>, /research, /reading). The address
-// bar follows the window in front, so a link copied from it opens the same window. My Computer and
-// dialogs have no page and leave the address alone.
+// Each window has a page of its own (/about, /now, /writing/<slug>, /research, /reading, and /<name> for
+// the owner's own pages). The address bar follows the window in front, so a link copied from it opens
+// the same window. My Computer and dialogs have no page and leave the address alone.
 const TITLES = { about: "About", now: "Now", writing: "Writing", research: "Research", reading: "Reading" };
 function route() {
   const top = Object.values(wins).filter((w) => w.focused && !w.min && w.app !== "dlg")[0];
-  if (!top || !TITLES[top.key]) return;
+  const name = top && (TITLES[top.key] || bodyOf(top.key)?.dataset.name);
+  if (!name) return;
   if (top.key === "reading" && /^#book-/.test(location.hash)) return;   // a book's address, set by the shelf
-  let path = $("#body-" + top.key)?.dataset.path || "/";
+  let path = bodyOf(top.key)?.dataset.path || "/";
   if (top.key === "writing" && top.sub) path += "/" + top.sub;
-  if (top.key === "about" && location.pathname === "/") path = "/";
+  if (top.key === document.body.dataset.home && location.pathname === "/") path = "/";   // the window the desktop opens on
   const sub = top.key === "writing" && top.sub ? $(`.jr-doc[data-doc="${CSS.escape(top.sub)}"]`)?.dataset.title : "";
-  document.title = path === "/" ? DATA.name : `${sub || TITLES[top.key]} · ${DATA.name}`;
+  document.title = path === "/" ? DATA.name : `${sub || name} · ${DATA.name}`;
   if (location.pathname !== path || location.hash) { try { history.replaceState(null, "", path + location.search); } catch {} }
 }
 document.addEventListener("click", (e) => {
@@ -590,7 +594,7 @@ function taskbar() {
     const b = document.createElement("button");
     b.className = "task app-" + w.app + (w.focused && !w.min ? " active" : "") + (w.min ? " minned" : "");
     b.setAttribute("role", "listitem");
-    b.innerHTML = `<span class="pic ${ICON_OF[w.key] || "txt"}"></span><span class="t">${w.title}</span>`;
+    b.innerHTML = `<span class="pic ${ICON_OF[w.key] || (w.app === "doc" ? "doc" : "txt")}"></span><span class="t">${w.title}</span>`;
     b.onclick = () => { if (w.min) { solo(w); w.restore(); w.focus(); } else if (w.focused) w.minimize(); else { solo(w); w.focus(); } };
     tasks.append(b);
   }
@@ -655,13 +659,17 @@ function dialog(title, html, glyph = "i", buttons = [{ label: "OK", primary: tru
 /* Run… : a tiny command line over the site */
 function runDialog() {
   const names = { about: "about", now: "now", writing: "writing", research: "research", reading: "reading", computer: "computer", "about.txt": "about", "now.txt": "now", "my computer": "computer" };
+  for (const p of DATA.pages || []) { names[p.slug] ??= p.key; names[p.title.toLowerCase()] ??= p.key; }
+  // help names only what is on this desktop, so a page switched off isn't mentioned.
+  const avail = [...new Set(["about", "now", "writing", "research", "reading", ...(DATA.pages || []).map((p) => p.slug), "computer"].filter((k) => has(names[k])))];
   dialog("Run", `<p>Type the name of a program, folder, document, or Internet resource, and ${escH(DATA.first)} XP will open it for you.</p>
     <input class="field" id="run-in" autocomplete="off" spellcheck="false" placeholder="help">
     <pre class="runout" id="run-out"></pre>`, "run", [{ label: "OK", primary: true, act(el, wb) {
       const inp = $("#run-in", el), out = $("#run-out", el), cmd = inp.value.trim().toLowerCase(); inp.value = "";
       const say = (s) => { out.textContent = s; requestAnimationFrame(() => wb.fit()); return false; };
       if (!cmd) return say("Nothing to run. Try help.");
-      if (cmd === "help") return say("Open: about, now, writing, research, reading, computer.\nAsk: whoami, uptime, date, weather.\nChange: wallpaper <name>, scheme blue, olive or silver, classic.\nAlso: cls, exit.");
+      if (cmd === "help") return say(`Open: ${avail.join(", ")}.\n`
+        + "Ask: whoami, uptime, date, weather.\nChange: wallpaper <name>, scheme blue, olive or silver, classic.\nAlso: cls, exit.");
       if (names[cmd]) { if (!open(names[cmd])) return say(`${DATA.first} hasn't put anything in ${cmd} yet.`); return; }
       if (cmd.startsWith("essay ") || cmd.startsWith("open ")) { const q = cmd.split(" ").slice(1).join(" "); const hit = DATA.writing.find((p) => p.title.toLowerCase().includes(q)); if (hit) { openWriting(hit.slug); return; } return say(`No piece called “${q}”.`); }
       if (cmd === "whoami") return say(`${DATA.name}. ${DATA.oneLiner}`);
@@ -729,7 +737,7 @@ function notepadMenu(body, key) {
   const bar = document.createElement("div"); bar.className = "menubar"; bar.setAttribute("role", "menubar");
   const pre = () => $(".np", body);
   const menus = {
-    File: [["New", "", () => newNote()], ["Open about.txt", "", () => open("about")], ["Open now.txt", "", () => open("now")], null,
+    File: [["New", "", () => newNote()], has("about") && ["Open about.txt", "", () => open("about")], has("now") && ["Open now.txt", "", () => open("now")], null,
       ["Save", "⌘S", () => denySave()], ["Save as…", "", () => denySave()], null, ["Exit", "", () => wins[key]?.close()]],
     Edit: [["Select all", "⌘A", () => { const r = document.createRange(); r.selectNodeContents(pre()); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }],
       ["Copy all", "", () => navigator.clipboard?.writeText(pre().textContent)], null, ["Time/Date", "F5", () => insert(pre(), new Date().toLocaleString())]],
@@ -744,6 +752,7 @@ function notepadMenu(body, key) {
       b.setAttribute("aria-expanded", "true");
       const dd = document.createElement("div"); dd.className = "dd"; dd.style.left = b.offsetLeft + "px";
       for (const it of items) {
+        if (it === false) continue;   // a file that isn't on this desktop
         if (!it) { dd.append(document.createElement("hr")); continue; }
         const x = document.createElement("button"); x.innerHTML = `<span>${it[0]}</span>${it[1] ? `<kbd>${it[1]}</kbd>` : ""}`;
         x.onclick = (ev) => { ev.stopPropagation(); closeMenus(); it[2](); }; dd.append(x);
@@ -813,7 +822,7 @@ function welcome(auto) {
 }
 function logOff() {
   closeMenus(); Object.values(wins).forEach((w) => w.close(true));
-  welcome(false).then(() => open("about"));
+  welcome(false).then(() => { if (document.body.dataset.home) open(document.body.dataset.home); });
 }
 function boot() {
   let skip = reduced || !DATA.boot; try { skip ||= !!sessionStorage.getItem("xp:booted"); } catch {}
@@ -880,7 +889,7 @@ const NEWS = SINCE == null ? null : {
   now: !!$("#body-now") && Date.parse(DATA.updated) > SINCE,
 };
 async function showNews() {
-  if (NEWS) {
+  if (NEWS && has("reading")) {
     const v = await loadShelf().catch(() => null);
     if (v && !v.sample) {
       NEWS.started = v.reading.filter((b) => b.addedAt && Date.parse(b.addedAt) > SINCE);
@@ -990,13 +999,17 @@ async function initOwner() {
 
 /* ---------------------------------------------------------------- go */
 // System Properties: books read, from the shelf.
-loadShelf().then((v) => { const n = v?.counts?.read ?? v?.read?.length; $$("[data-books]").forEach((el) => el.textContent = n ? n.toLocaleString("en") : "None yet"); }).catch(() => {});
+if (has("reading")) loadShelf().then((v) => { const n = v?.counts?.read ?? v?.read?.length; $$("[data-books]").forEach((el) => el.textContent = n ? n.toLocaleString("en") : "None yet"); }).catch(() => {});
 
 boot().then(() => {
-  const want = document.body.dataset.window;
+  const want = document.body.dataset.window, home = document.body.dataset.home;
   if (want === "writing") openWriting(document.body.dataset.piece);
   else if (want) open(want);
-  else dialog("Not found", `<p>There is no file at ${escH(location.pathname)}.</p>`, "!", [{ label: "Open about.txt", primary: true, act() { open("about"); } }]);
+  // Not found: say so, and offer the window the desktop opens on (about.txt, unless About is off).
+  else if ("notfound" in document.body.dataset) {
+    const label = home && $(`.icon[data-open="${CSS.escape(home)}"] .lbl`)?.textContent;
+    dialog("Not found", `<p>There is no file at ${escH(location.pathname)}.</p>`, "!", label ? [{ label: `Open ${escH(label)}`, primary: true, act() { open(home); } }] : undefined);
+  }
   setTimeout(showNews, 700);
   initOwner();
 });

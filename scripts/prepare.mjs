@@ -177,6 +177,7 @@ singletons:
     file: content/about.json
     format: json
     fields:
+      - { label: "Show the About page", name: show, widget: boolean, default: true, required: false, hint: "Off takes it out of the menu and the home page, and its address says not found." }
       - { label: Paragraphs, name: paragraphs, widget: list, field: { label: Paragraph, name: p, widget: text } }
       - label: Experience
         name: experience
@@ -210,6 +211,7 @@ singletons:
     file: content/writing.json
     format: json
     fields:
+          - { label: "Show the Writing page", name: show, widget: boolean, default: true, required: false, hint: "Off takes it out of the menu and the home page, and its address says not found." }
           - { label: Subtitle, name: intro, widget: text, required: false, hint: "Its description in search results and link previews." }
           - { label: Posts to leave out, name: hide, widget: list, required: false, collapsed: true, source: /writing/elsewhere.json, field: { label: Address, name: url, widget: string }, hint: "Medium or Substack posts to hide from your site." }
   - name: research
@@ -218,6 +220,7 @@ singletons:
     file: content/research.json
     format: json
     fields:
+          - { label: "Show the Research page", name: show, widget: boolean, default: true, required: false, hint: "Off takes it out of the menu and the home page, and its address says not found." }
           - { label: Subtitle, name: intro, widget: text, required: false, hint: "A line or two at the top of the Research window. Also its description in search results and link previews." }
           - label: Publications and talks
             name: items
@@ -251,6 +254,22 @@ collections:
       - { label: Published elsewhere, name: link, widget: string, required: false, hint: "If the piece lives on another site, its address. The list links there instead." }
       - { label: Draft, name: draft, widget: boolean, default: false, required: false, hint: "Drafts are not published." }
       - { label: Body, name: body, widget: markdown }
+  - name: pages
+    label: Your pages
+    label_singular: Page
+    icon: description
+    folder: content/pages
+    create: true
+    format: frontmatter
+    extension: md
+    slug: "{{slug}}"
+    summary: "{{title}}"
+    fields:
+      - { label: Title, name: title, widget: string, hint: "Also the page's name in the menu." }
+      - { label: Show this page, name: show, widget: boolean, default: true, required: false, hint: "Off takes it out of the menu, and its address says not found." }
+      - { label: Photo, name: photo, widget: image, required: false }
+      - { label: Description, name: description, widget: string, required: false, hint: "For search results and link previews. Left empty, the first sentence is used." }
+      - { label: Text, name: body, widget: markdown }
 `;
 write("public/admin/config.yml", config);
 const feeds = Object.values(postSources).filter(Boolean).map((s) => s.feed).join(" ") || "(none)";

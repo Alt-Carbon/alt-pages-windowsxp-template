@@ -26,6 +26,7 @@
 // Once a day, after a page has been answered, the site tells the company dashboard where it
 // lives (hello.js). Empty "Company dashboard" in Site settings → Advanced turns that off.
 
+import { notIfOff } from "./off.js";
 import { coverSource } from "./core/feed.js";
 import { UA } from "./core/sync.js";
 import { allBooks } from "./store.js";
@@ -154,7 +155,7 @@ export default {
     if (!url.pathname.startsWith(`${BASE}/`)) {
       const res = await env.ASSETS.fetch(request);
       if (request.method === "GET" && res.ok && (res.headers.get("content-type") || "").startsWith("text/html")) ctx.waitUntil(sayHello(request, env));
-      return stamp(request, res);
+      return notIfOff(request, env, await stamp(request, res), stamp);
     }
     const path = url.pathname.slice(BASE.length).replace(/\/$/, "");
 

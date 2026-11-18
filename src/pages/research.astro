@@ -1,6 +1,8 @@
 ---
+// Research. Empty, the desktop opens on its first window instead; switched off, the address answers "not found".
 import Desktop from "../layouts/Desktop.astro";
 import { research, shown } from "../lib/content";
+import { home } from "../lib/desktop";
 const on = await shown();
 ---
-<Desktop page="research" open={on.has("research") ? "research" : "about"} title="Research" description={research.intro || undefined} />
+<Desktop page="research" open={on.has("research") ? "research" : (await home()).key} title="Research" description={research.intro || undefined} />
