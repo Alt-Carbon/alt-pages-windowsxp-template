@@ -24,7 +24,7 @@ const reading = JSON.parse(readFileSync("content/reading.json", "utf8"));
 // after a profile is added. YAML double-quoted strings, so no raw double quotes inside.
 const SAMPLE = !String(site.goodreads || "").trim() && reading.show !== false;
 const sampleWarning = SAMPLE
-  ? "⚠️ Not set yet, so your Reading page shows a sample shelf. "
+  ? " ⚠️ Not set yet, so your Reading page shows a sample shelf."
   : "";
 
 // The same for Medium and Substack: until one is set, the Writing page (if it has any pieces) also
@@ -33,7 +33,7 @@ const postSources = { medium: mediumSource(site.medium), substack: substackSourc
 const pieces = existsSync("content/writing") ? readdirSync("content/writing").filter((f) => f.endsWith(".md")).length : 0;
 const SAMPLE_POSTS = !postSources.medium && !postSources.substack && pieces > 0;
 const postsWarning = SAMPLE_POSTS
-  ? "⚠️ Not set yet, so your Writing page shows sample posts. "
+  ? " ⚠️ Not set yet, so your Writing page shows sample posts."
   : "";
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 const accents = JSON.parse(readFileSync("src/lib/accents.json", "utf8"));
@@ -143,9 +143,9 @@ singletons:
           - { label: Pinned to the desktop, name: pinned, widget: relation, collection: writing, value_field: "{{slug}}", search_fields: [title], display_fields: [title], multiple: true, required: false, hint: "Pieces of writing that get their own icon on the desktop." }
       - { label: Bookshelf style, name: shelf, widget: select, default: stacks, hint: "How the Reading window first shows your books. Visitors can switch styles.", options: [ { label: "Journal: a year-by-year reading log with your reviews", value: journal }, { label: "Gallery: large covers, a book opens in a panel tinted its own colour", value: gallery }, { label: "Stacks: books lying in piles by year, titles readable", value: stacks }, { label: "Turn: 3D books on a dark shelf that turn to face you", value: turn } ] }
       - { label: Accent colour, name: accent, widget: select, default: aerospace-orange, hint: "Not used by the XP desktop, which keeps the Luna blue. Kept so the same content works on the other templates.", options: [ ${accents.map((a) => `{ label: "${a.label}", value: ${a.id}, color: "${a.light}" }`).join(", ")} ] }
-      - { label: Goodreads profile, name: goodreads, widget: string, required: false, hint: "${sampleWarning}Your Goodreads profile address. It must be public." }
-      - { label: Medium, name: medium, widget: string, required: false, hint: "${postsWarning}Your Medium address or @handle. Shows your 10 newest stories." }
-      - { label: Substack, name: substack, widget: string, required: false, hint: "${postsWarning}Your Substack address, e.g. yourname.substack.com. Shows your 20 newest posts." }
+      - { label: Goodreads profile, name: goodreads, widget: string, required: false, hint: "Your Goodreads profile address. It must be public.${sampleWarning}" }
+      - { label: Medium, name: medium, widget: string, required: false, hint: "Your Medium address or @handle. Shows your 10 newest stories.${postsWarning}" }
+      - { label: Substack, name: substack, widget: string, required: false, hint: "Your Substack address, e.g. yourname.substack.com. Shows your 20 newest posts.${postsWarning}" }
       - label: Advanced
         name: advanced
         widget: object
