@@ -261,3 +261,6 @@ console.log(`prepare: repo ${repo || "(unknown)"}, owner ${owner || "(unknown)"}
 // have no such file; they get an empty one, so the page's <link> always finds something.
 const CUSTOM_CSS = existsSync("content/custom.css") ? readFileSync("content/custom.css", "utf8") : "/* Your own styles go in content/custom.css. */\n";
 writeFileSync("public/custom.css", CUSTOM_CSS);
+// The style guide, for the editor's "Change the look" page (it reads the colours, fonts and parts
+// sections). AGENTS.md holds nothing private: it is the same in every site made from this template.
+if (existsSync("AGENTS.md")) writeFileSync("public/admin/agents.md", readFileSync("AGENTS.md", "utf8"));
