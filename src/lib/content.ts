@@ -207,7 +207,7 @@ export async function freshness() {
   const w = await writing();
   const candidates: [string, string][] = [];
   if (now.show) candidates.push(["now", now.updated]);
-  if (w[0]) candidates.push(["writing", iso(w[0].data.date)]);
+  if (writingPage.show && w[0]) candidates.push(["writing", iso(w[0].data.date)]); // not from a page that is switched off
   candidates.sort((a, b) => b[1].localeCompare(a[1]));
   return candidates[0] ? { page: candidates[0][0], date: candidates[0][1] } : { page: "", date: iso(new Date(build.builtAt)) };
 }
