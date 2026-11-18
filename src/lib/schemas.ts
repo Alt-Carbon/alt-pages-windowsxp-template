@@ -16,7 +16,8 @@ export const Site = z.object({
   pronunciation: z.string().default(""),
   greeting: z.string().default(""),
   oneLiner: z.string().min(1),
-  intro: z.string().default(""),
+  // `intro` (the old "Second line") is no longer edited or shown. Older site.json files may still have
+  // it; unknown keys are dropped here, so they keep building.
   place: z.string().default(""),
   employer: z.string().default(""),
   employerUrl: z.string().default(""),

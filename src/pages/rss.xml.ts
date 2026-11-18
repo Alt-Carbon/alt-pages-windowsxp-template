@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ url }) => {
   }).join("\n");
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel>
-<title>${esc(site.name)}</title><link>${base}/</link><description>${esc(`${site.oneLiner} ${site.intro}`.trim())}</description><language>en</language>
+<title>${esc(site.name)}</title><link>${base}/</link><description>${esc(site.oneLiner)}</description><language>en</language>
 <atom:link href="${base}/rss.xml" rel="self" type="application/rss+xml"/>${posts[0] ? `<lastBuildDate>${posts[0].data.date.toUTCString()}</lastBuildDate>` : ""}
 ${items}
 </channel></rss>`;

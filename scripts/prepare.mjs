@@ -129,7 +129,6 @@ singletons:
       - { label: Name, name: name, widget: string }
       - { label: Greeting, name: greeting, widget: string, required: false, hint: "What Run answers when a visitor types hello, e.g. Hi, I am Asha" }
       - { label: One-liner, name: oneLiner, widget: string, hint: "One sentence about you. The site's description in search results and link previews." }
-      - { label: Second line, name: intro, widget: text, required: false, hint: "One or two more sentences, added to the description after the one-liner." }
       - { label: Place, name: place, widget: string, required: false }
       - { label: Employer, name: employer, widget: string, required: false }
       - { label: Employer link, name: employerUrl, widget: string, required: false }
@@ -257,7 +256,7 @@ collections:
     fields:
       - { label: Title, name: title, widget: string }
       - { label: Date, name: date, widget: datetime, format: YYYY-MM-DD, time_format: false }
-      - { label: One-line blurb, name: blurb, widget: string, required: false }
+      - { label: Description, name: blurb, widget: string, required: true, hint: "One line, shown under the title wherever your writing is listed." }
       - { label: Published elsewhere, name: link, widget: string, required: false, hint: "If the piece lives on another site, its address. The list links there instead." }
       - { label: Draft, name: draft, widget: boolean, default: false, required: false, hint: "Drafts are not published." }
       - { label: Body, name: body, widget: markdown }

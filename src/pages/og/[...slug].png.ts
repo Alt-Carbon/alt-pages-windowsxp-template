@@ -10,7 +10,7 @@ const plain = (s = "") => s.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/[*_
 export const getStaticPaths: GetStaticPaths = async () => {
   const posts = await writing();
   const cards: Record<string, Card> = {
-    home: { title: plain(site.oneLiner), subtitle: plain(site.intro) },
+    home: { title: plain(site.oneLiner) },
     writing: { title: "Writing", subtitle: posts[0] ? `Latest: ${posts[0].data.title}` : undefined, kicker: `${posts.length} ${posts.length === 1 ? "piece" : "pieces"}` },
     research: { title: "Research", subtitle: plain(research.intro), kicker: `${research.items.length} ${research.items.length === 1 ? "item" : "items"}` },
     reading: { title: "Reading", subtitle: plain(reading.intro) },

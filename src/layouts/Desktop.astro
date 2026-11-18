@@ -29,7 +29,7 @@ const on = await shown();
 const off = Astro.props.off ?? switchedOff(page);
 const hidden = off || pages.some((p) => p.id === page && !on.has(p.id));
 const fullTitle = title ? `${title} · ${site.name}` : site.name;
-const desc = description || `${site.oneLiner} ${site.intro}`.trim();
+const desc = description || site.oneLiner;
 const base = origin(Astro.url);
 const path = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/") || "/";
 const url = base + path;

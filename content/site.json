@@ -2,8 +2,7 @@
   "name": "Asha Rao",
   "greeting": "Hi, I am Asha",
   "oneLiner": "I build AI tools and internal software at Alt Carbon.",
-  "intro": "We remove carbon dioxide from the air by spreading crushed basalt on farmland. I make the software around that easier to use.",
-  "place": "India",
+  "place": "Bengaluru, India",
   "employer": "Alt Carbon",
   "employerUrl": "https://altcarbon.com",
   "photo": "/media/photo.png",
@@ -14,14 +13,6 @@
     },
     {
       "label": "LinkedIn",
-      "url": "https://example.com"
-    },
-    {
-      "label": "GitHub",
-      "url": "https://example.com"
-    },
-    {
-      "label": "X",
       "url": "https://example.com"
     }
   ],
