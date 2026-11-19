@@ -12,31 +12,45 @@ export const plain = (s: string) =>
   s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t: string, u: string) => (u.startsWith("mailto:") ? t : `${t} <${u}>`))
     .replace(/\*\*/g, "").replace(/\*/g, "");
 
+// A Notepad file in parts: each part's text, and the field it shows (data-field, for the editor's
+// preview, which outlines a field's part and opens the field when it's clicked). Joined, the parts
+// are the file's plain text.
+export type Part = { text: string; field?: string };
+export const textOf = (parts: Part[]) => parts.map((p) => p.text).join("");
+// Blocks of parts, a blank line between blocks.
+const blocks = (bs: Part[][]) => bs.filter((b) => b.length).flatMap((b, i) => (i ? [{ text: "\n\n" }, ...b] : b));
+
 // about.txt: headings are lines of their own, columns are tab stops (Notepad sets a wide tab).
-export function aboutText(): string {
-  const L: string[] = [site.name, ""];
-  for (const p of about.paragraphs) L.push(plain(p), "");
+export function aboutParts(): Part[] {
+  const B: Part[][] = [[{ text: site.name, field: "site.name" }]];
+  for (const p of about.paragraphs) B.push([{ text: plain(p), field: "about.paragraphs" }]);
   if (about.experience.length) {
-    L.push("Experience");
+    const L: string[] = [];
     for (const e of about.experience) {
       L.push(`${years(e).replace(" – ", "–")}\t${e.role}, ${e.org}`);
       if (e.summary) L.push(`\t${plain(e.summary)}`);
     }
-    L.push("");
+    B.push([{ text: "Experience\n" }, { text: L.join("\n"), field: "about.experience" }]);
   }
-  if (about.contact) L.push("Contact", plain(about.contact), "");
-  if (about.facts.length) L.push(...about.facts.map((f) => `${f.label}\t${plain(f.value)}`), "");
-  if (about.shortBio) L.push("Short bio", about.shortBio, "");
-  return L.join("\n").trimEnd() + "\n";
+  if (about.contact) B.push([{ text: "Contact\n" }, { text: plain(about.contact), field: "about.contact" }]);
+  if (about.facts.length) B.push([{ text: about.facts.map((f) => `${f.label}\t${plain(f.value)}`).join("\n"), field: "about.facts" }]);
+  if (about.shortBio) B.push([{ text: "Short bio\n" }, { text: about.shortBio, field: "about.shortBio" }]);
+  const parts = blocks(B);
+  const last = parts[parts.length - 1]!;
+  last.text = last.text.trimEnd();
+  return [...parts, { text: "\n" }];
 }
+export const aboutText = () => textOf(aboutParts());
 
 // now.txt
-export function nowText(): string {
-  const L: string[] = ["Now", `Updated ${day(now.updated)}`, ""];
-  for (const g of now.groups) L.push(g.heading, ...g.items.map((i) => `•\t${plain(i)}`), "");
-  L.push("This is a now page <https://nownownow.com/about>.");
-  return L.join("\n");
+export function nowParts(): Part[] {
+  return blocks([
+    [{ text: "Now\n" }, { text: `Updated ${day(now.updated)}`, field: "now.updated" }],
+    ...now.groups.map((g) => [{ text: [g.heading, ...g.items.map((i) => `•\t${plain(i)}`)].join("\n"), field: "now.groups" }]),
+    [{ text: "This is a now page <https://nownownow.com/about>." }],
+  ]);
 }
+export const nowText = () => textOf(nowParts());
 
 // Where the owner is, for their local time and weather on the taskbar.
 export const city = (site.desktop.city || about.facts.find((f) => /^based/i.test(f.label))?.value || site.place || "").trim();

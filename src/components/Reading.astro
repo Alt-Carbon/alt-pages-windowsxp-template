@@ -6,17 +6,17 @@ const styles = [["journal", "Journal"], ["gallery", "Gallery"], ["stacks", "Stac
 ---
 <div class="reading">
   <h1 class="vh">Reading</h1>
-  {reading.intro && <p class="intro">{reading.intro}</p>}
+  {reading.intro && <p class="intro" data-field="reading.intro">{reading.intro}</p>}
   <div class="rtop">
     <div class="tabs" role="tablist">
       <button role="tab" type="button" aria-selected="true" data-tab="books">Books</button>
       {reading.links.length > 0 && <button role="tab" type="button" aria-selected="false" data-tab="links">Links <span class="ct">{reading.links.length}</span></button>}
     </div>
-    <div class="shelfpick" role="group" aria-label="Shelf style">
+    <div class="shelfpick" role="group" aria-label="Shelf style" data-field="site.shelf">
       {styles.map(([k, l]) => <button type="button" data-shelf={k} aria-pressed={k === site.shelf ? "true" : "false"}>{l}</button>)}
     </div>
   </div>
-  <div class="pane" data-pane="books">
+  <div class="pane" data-pane="books" data-field="site.goodreads">
     <div class="shelf-host" data-default={site.shelf} data-goodreads={site.goodreads || undefined}>
       <noscript><p class="src">The bookshelf needs JavaScript. {site.goodreads && <a href={site.goodreads}>See it on Goodreads.</a>}</p></noscript>
     </div>

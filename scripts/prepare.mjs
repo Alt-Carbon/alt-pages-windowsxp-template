@@ -242,6 +242,44 @@ singletons:
               - { label: Kind, name: kind, widget: select, default: Paper, options: [${RESEARCH_KINDS.join(", ")}] }
               - { label: Link, name: url, widget: string, required: false, hint: "The DOI or main page. The title links here." }
               - { label: Note, name: note, widget: string, required: false }${links("links", "More links", "PDF, Code, Data, Slides, Recording", "              ")}
+# The editor by page: the desktop's icons in order, each window with the fields that show in it.
+# Fields not named here stay in Site settings (name, photo, links, the desktop and its wallpaper:
+# they show on every page). Files don't move; only the editor groups them.
+site_pages:
+  - id: about
+    label: About
+    url: /about
+    show: about.show
+    lede: "about.txt, open in Notepad. Your desktop opens on it."
+    fields:
+      - about.paragraphs
+      - { group: Experience, fields: [about.experience, about.cv] }
+      - { group: Contact, fields: [about.contact, about.facts, about.shortBio] }
+  - id: writing
+    label: Writing
+    url: /writing
+    show: writing_page.show
+    tabs:
+      - { label: On this site, fields: [writing_page.intro], collection: writing, entry_url: "/writing/{slug}" }
+      - { label: Elsewhere, lede: "Posts you write on Medium or Substack, listed with the rest. They're fetched by themselves, about once an hour.", fields: [site.medium, site.substack, writing_page.hide] }
+  - id: research
+    label: Research
+    url: /research
+    show: research.show
+    fields: [research.intro, research.items]
+  - id: reading
+    label: Reading
+    url: /reading
+    show: reading.show
+    lede: "Your Goodreads shelf, kept up to date by itself. Until you add your profile, the window shows a sample shelf."
+    fields: [site.goodreads, site.shelf, reading.intro]
+  - id: now
+    label: Now
+    url: /now
+    show: now.show
+    lede: "now.txt: what you're focused on this month."
+    fields: [now.updated, now.groups]
+  - { own: pages, entry_url: "/{slug}" }
 collections:
   - name: writing
     label: Writing

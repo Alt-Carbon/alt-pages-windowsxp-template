@@ -9,7 +9,7 @@ import Journal from "../components/Journal.astro";
 import Research from "../components/Research.astro";
 import Reading from "../components/Reading.astro";
 import { about, currentRole, origin, owner, ownPages, pages, repo, shown, site, switchedOff, template } from "../lib/content";
-import { aboutText, deskData, first, home, icons, nowText, stats } from "../lib/desktop";
+import { aboutParts, deskData, first, home, icons, nowParts, stats } from "../lib/desktop";
 
 interface Props {
   page: string;            // for SEO: home, about, now, writing, essay, research, reading, 404, page:<slug>
@@ -125,7 +125,7 @@ const year = st.installed.slice(-4);
 <div id="toasts" aria-live="polite"></div>
 
 <div id="startmenu" hidden>
-  <div class="who">{site.photo ? <img src={site.photo} alt="" width="42" height="42"> : <span class="pic user"></span>}<b>{site.name}</b></div>
+  <div class="who">{site.photo ? <img src={site.photo} alt="" width="42" height="42" data-field="site.photo"> : <span class="pic user"></span>}<b data-field="site.name">{site.name}</b></div>
   <div class="cols">
     <div class="left">
       {list.filter((ic) => ic.href && !ic.doc).map((ic) => <button class="mi" type="button" data-open={ic.key}><span class="pic" class:list={[ic.ico]}></span><span><b>{ic.label}</b><small>{APP[ic.ico] || ""}</small></span></button>)}
@@ -137,7 +137,7 @@ const year = st.installed.slice(-4);
       <button class="mi" type="button" data-open="computer"><span class="pic pc"></span>My Computer</button>
       <button class="mi" type="button" data-act="display"><span class="pic display"></span>Display Properties</button>
       {social.length > 0 && <hr>}
-      {social.map((l) => <a class="mi soft" href={l.url} target={l.web ? "_blank" : undefined} rel={l.web ? "noopener" : undefined}>{l.label}</a>)}
+      {social.map((l) => <a class="mi soft" data-field="site.social" href={l.url} target={l.web ? "_blank" : undefined} rel={l.web ? "noopener" : undefined}>{l.label}</a>)}
       <span class="pad"></span>
       <hr>
       <button class="mi soft" type="button" data-act="help">Help and Support</button>
@@ -160,13 +160,13 @@ const year = st.installed.slice(-4);
   {on.has("about") && (
     <div class="winbody app-notepad" id="body-about" data-app="notepad" data-title="about.txt - Notepad" data-path="/about" hidden={!show("about")}>
       <h1 class="vh">About {site.name}</h1>
-      <pre class="np" contenteditable="true" spellcheck="false">{aboutText()}</pre>
+      <pre class="np" contenteditable="true" spellcheck="false">{aboutParts().map((p) => (p.field ? <span data-field={p.field}>{p.text}</span> : p.text))}</pre>
     </div>
   )}
   {on.has("now") && (
     <div class="winbody app-notepad" id="body-now" data-app="notepad" data-title="now.txt - Notepad" data-path="/now" hidden={!show("now")}>
       <h1 class="vh">Now</h1>
-      <pre class="np" contenteditable="true" spellcheck="false">{nowText()}</pre>
+      <pre class="np" contenteditable="true" spellcheck="false">{nowParts().map((p) => (p.field ? <span data-field={p.field}>{p.text}</span> : p.text))}</pre>
     </div>
   )}
   {on.has("writing") && (
@@ -187,18 +187,18 @@ const year = st.installed.slice(-4);
   {mine.map(({ p, Content }) => (
     <div class="winbody app-doc" id={`body-page-${p.id}`} data-app="doc" data-title={`${p.data.title} - WordPad`} data-name={p.data.title} data-path={`/${p.id}`} hidden={!show(`page-${p.id}`)}>
       <article class="essay own">
-        <h1 class="doc-title">{p.data.title}</h1>
-        {p.data.photo && <img class="own-photo" src={p.data.photo} alt="" width="400" height="400">}
+        <h1 class="doc-title" data-field={`pages:${p.id}.title`}>{p.data.title}</h1>
+        {p.data.photo && <img class="own-photo" src={p.data.photo} alt="" width="400" height="400" data-field={`pages:${p.id}.photo`}>}
         <Content />
       </article>
     </div>
   ))}
   <div class="winbody app-sys" id="body-computer" data-app="sys" data-title="System Properties" hidden>
     <div class="sys">
-      {site.photo ? <img class="sysico photo" src={site.photo} alt="" width="64" height="64"> : <div class="sysico pic pc"></div>}
+      {site.photo ? <img class="sysico photo" src={site.photo} alt="" width="64" height="64" data-field="site.photo"> : <div class="sysico pic pc"></div>}
       <dl>
         <dt>System</dt><dd>{first} XP Professional<br>Version {year}</dd>
-        <dt>Registered to</dt><dd>{site.name}{data.city && <><br>{data.city}</>}</dd>
+        <dt>Registered to</dt><dd data-field="site.name">{site.name}{data.city && <><br>{data.city}</>}</dd>
         <dt>Installed</dt><dd>{st.installed}</dd>
         <dt>Last updated</dt><dd>{st.updated}</dd>
         {on.has("writing") && st.pieces > 0 && <><dt>Writing</dt><dd>{st.pieces} {st.pieces === 1 ? "piece" : "pieces"}, {st.words.toLocaleString("en")} words</dd></>}

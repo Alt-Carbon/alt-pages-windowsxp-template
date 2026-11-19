@@ -125,7 +125,7 @@ async function posts(request, env, ctx, url) {
   // Nothing connected: the sample posts in public/, and the config file itself.
   if (!sources) {
     if (path === "/status") return json({ sources: null, syncedAt: null });
-    if (path === "/sync") return json({ error: "No Medium or Substack address is set. Add one in the editor under Site settings." }, 409);
+    if (path === "/sync") return json({ error: "No Medium or Substack address is set. Add one in the editor, on the Writing page under Elsewhere." }, 409);
     return env.ASSETS.fetch(request);
   }
   const name = postsName(sources);
@@ -180,7 +180,7 @@ export default {
     // No profile connected: the sample shelf and the other static files under /reading.
     if (!userId) {
       if (path === "/status") return json({ profile: null, syncedAt: null });
-      if (path === "/sync") return json({ error: "No Goodreads profile is set. Add one in the editor under Site settings." }, 409);
+      if (path === "/sync") return json({ error: "No Goodreads profile is set. Add one in the editor, on the Reading page." }, 409);
       return env.ASSETS.fetch(request);
     }
     const stub = object(env, userId);

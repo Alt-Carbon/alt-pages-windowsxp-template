@@ -18,7 +18,7 @@ const Content = essay?.Content;
     <h2><span>By {first}</span><span class="ct">{posts.length}</span></h2>
     <ul class="jr-list">
       {posts.map((p) => (
-        <li data-date={p.data.date.toISOString().slice(0, 10)}><a class="jr-item" href={p.data.link || `/writing/${p.id}`} data-note={p.id} aria-current={essay?.slug === p.id ? "true" : "false"}>
+        <li data-date={p.data.date.toISOString().slice(0, 10)} data-field={`writing:${p.id}`}><a class="jr-item" href={p.data.link || `/writing/${p.id}`} data-note={p.id} aria-current={essay?.slug === p.id ? "true" : "false"}>
           <span class="t">{p.data.title}{p.data.link && <> ↗ <span class="where">{whereIs(p.data.link)}</span></>}</span><span class="m">{day(p.data.date)}</span>
         </a></li>
       ))}
@@ -31,8 +31,8 @@ const Content = essay?.Content;
       <article class="jr-doc essay" data-doc={p.id} data-title={p.data.title} tabindex="-1" hidden>
         <div class="jr-bar"><button class="lock" type="button" title={`Only ${first} can change this`}>Locked</button></div>
         <div class="jr-text">
-          <h2 class="doc-title">{p.data.title}</h2><p class="stamp">{day(p.data.date)}</p>
-          {p.data.blurb && <p>{p.data.blurb}</p>}
+          <h2 class="doc-title" data-field={`writing:${p.id}.title`}>{p.data.title}</h2><p class="stamp">{day(p.data.date)}</p>
+          {p.data.blurb && <p data-field={`writing:${p.id}.blurb`}>{p.data.blurb}</p>}
           <p><a class="btn primary ext" href={p.data.link} target="_blank" rel="noopener">Read it on {whereIs(p.data.link!) || host(p.data.link!)}</a></p>
         </div>
       </article>
@@ -42,7 +42,7 @@ const Content = essay?.Content;
       return (
         <article class="jr-doc essay" data-doc={p.id} data-title={p.data.title} tabindex="-1">
           <div class="jr-bar"><button class="lock" type="button" title={`Only ${first} can change this`}>Locked</button>{notes && <span class="mn-hint">Select a passage to add your own note</span>}</div>
-          <div class="jr-text"><h1>{p.data.title}</h1><p class="stamp">{day(p.data.date)}</p><Content /></div>
+          <div class="jr-text"><h1 data-field={`writing:${p.id}.title`}>{p.data.title}</h1><p class="stamp">{day(p.data.date)}</p><Content /></div>
           <section class="mn-list" hidden></section>
         </article>
       );

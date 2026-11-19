@@ -1,5 +1,5 @@
 // Posts published on Medium or Substack, read in the browser from /writing/elsewhere.json (the site's
-// own posts sync, or the sample shipped in public/ until an address is set in Site settings). The
+// own posts sync, or the sample shipped in public/ until an address is set in the editor, Writing → Elsewhere). The
 // Writing page and the home page both add them to their lists with this.
 
 // Everything the sync keeps per post (src/worker/core/posts.js normalise()).
@@ -44,6 +44,7 @@ export function postRow(p: Post, blurb = true): HTMLLIElement {
   li.className = "in";
   li.dataset.sort = p.date || "";
   li.dataset.id = p.id;
+  li.dataset.field = p.source === "substack" ? "site.substack" : "site.medium"; // the editor: where this row comes from
   const where = WHERE[p.source] || p.source;
   li.innerHTML = `<span><a href="${esc(p.url)}">${esc(p.title)}<span class="ext" aria-hidden="true">↗</span><span class="vh"> (on ${esc(where)})</span></a>${chip(where)}`
     + (blurb && p.blurb ? `<span class="n">${esc(p.blurb)}</span>` : "") + `</span><span class="r">${day(p.date)}</span>`;
