@@ -188,6 +188,7 @@ singletons:
       - label: Experience
         name: experience
         widget: list
+        import: linkedin
         required: false
         collapsed: true
         summary: "{{fields.role}}, {{fields.org}}"

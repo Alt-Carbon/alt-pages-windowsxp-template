@@ -13,7 +13,8 @@
 //                             first" screen until it is true (see public/admin/index.html)
 // GET  /auth?provider=github  the editor opens this in a popup; redirects to GitHub to sign in
 // GET  /callback              GitHub sends the person back here; the token goes to the editor
-//                             by postMessage, to this site's origin only
+//                             by postMessage, to this site's origin only (or, for a site on its
+//                             own domain, to that domain, which start() has checked)
 //
 // This is the editor's sign-in by default: scripts/prepare.mjs points the editor's base_url at
 // this site. Site settings → Advanced → "Other sign-in service" points it somewhere else instead.
@@ -33,6 +34,13 @@ const UA = "alt-pages-site-auth";
 const cookie = (header, name) => (header || "").split(/;\s*/).map((p) => p.split("=")).find(([k]) => k === name)?.[1] || "";
 const setCookie = (name, value, maxAge) => `${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 const random = () => crypto.randomUUID().replaceAll("-", "");
+// A signature only this site's Worker can make (keyed by its sign-in app's secret): proves that an
+// address sending people here to sign in is one of this site's own.
+const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+async function signFor(secret, text) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return b64url(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(text)));
+}
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 // --- the pure parts, also used by the tests ----------------------------------------------
@@ -236,7 +244,8 @@ async function setupDone(request, env, url) {
   }
   // id and pem (the app's private key) let the site's Worker act as the app for the weekly update
   // (src/worker/update.js). They stay in this site's own storage, like the client secret.
-  await env.BOOKS.put(APP_KEY, JSON.stringify({ client_id: app.client_id, client_secret: app.client_secret, slug: app.slug, owner, html_url: app.html_url, app_id: app.id, pem: app.pem, created: new Date().toISOString(), installed: false }));
+  // home: the address the app was made at, the only one GitHub sends people back to (see start()).
+  await env.BOOKS.put(APP_KEY, JSON.stringify({ client_id: app.client_id, client_secret: app.client_secret, slug: app.slug, owner, html_url: app.html_url, app_id: app.id, pem: app.pem, home: url.origin, created: new Date().toISOString(), installed: false }));
   const install = `https://github.com/apps/${app.slug}/installations/new`;
   return html(page("Install the sign-in app", `${steps(2)}<p class="eyebrow">Step 2 of 2</p><h1>Now install it</h1>
 <p>GitHub made <b>${esc(app.slug)}</b>. One more press: install it so your editor can save your changes to <code>${esc(repo)}</code>.</p>
@@ -256,19 +265,36 @@ async function start(request, env, url) {
   // cannot survive: the editor would wait for it forever. So the window tells the editor at once
   // ("set up sign-in first"), and offers the setup in a normal tab.
   if (!app) return html(setupNeededHtml(origin), 200, { "set-cookie": setCookie(CSRF_COOKIE, "deleted", 0) });
+  // GitHub only sends people back to the address the sign-in app was set up on (its home). On any
+  // other address of this site (its own domain, say), sign in at home and send the answer back
+  // here: the address goes along signed, so home knows it is this site's and not someone else's.
+  if (app.home && app.home !== origin) {
+    const to = new URL(`${app.home}/auth`);
+    to.search = new URLSearchParams({ provider, for: origin, sig: await signFor(app.client_secret, origin) }).toString();
+    return new Response(null, { status: 302, headers: { location: to.toString(), "cache-control": "no-store" } });
+  }
+  let back = "";
+  const asked = url.searchParams.get("for") || "";
+  if (asked && asked !== origin) {
+    if (!/^https:\/\/[a-z0-9.-]+(:\d+)?$/i.test(asked) || url.searchParams.get("sig") !== (await signFor(app.client_secret, asked)))
+      return popup(origin, { error: "That sign-in didn't come from this site's editor. Open the editor and sign in again.", errorCode: "CSRF_DETECTED" });
+    back = asked;
+  }
   const csrf = random();
   const params = new URLSearchParams({ client_id: app.client_id, redirect_uri: `${origin}/callback`, state: csrf });
   return new Response(null, {
     status: 302,
-    headers: { location: `https://github.com/login/oauth/authorize?${params}`, "set-cookie": setCookie(CSRF_COOKIE, `github_${csrf}`, TEN_MINUTES), "cache-control": "no-store" },
+    headers: { location: `https://github.com/login/oauth/authorize?${params}`, "set-cookie": setCookie(CSRF_COOKIE, `github_${csrf}${back ? `.${b64url(new TextEncoder().encode(back))}` : ""}`, TEN_MINUTES), "cache-control": "no-store" },
   });
 }
 
 async function callback(request, env, url) {
-  const origin = url.origin;
+  // The answer goes to the editor that asked: this address, or the one start() checked and kept.
+  const [, csrf, backEnc] = /^github_(\w+)(?:\.([\w-]+))?$/.exec(cookie(request.headers.get("cookie"), CSRF_COOKIE)) || [];
+  let origin = url.origin;
+  if (backEnc) { try { origin = new TextDecoder().decode(Uint8Array.from(atob(backEnc.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0))); } catch { /* keep this address */ } }
   const code = url.searchParams.get("code") || "";
   const state = url.searchParams.get("state") || "";
-  const [, csrf] = /^github_(\w+)$/.exec(cookie(request.headers.get("cookie"), CSRF_COOKIE)) || [];
   if (!code || !state) return popup(origin, { error: "GitHub did not send a login code. Try again.", errorCode: "AUTH_CODE_REQUEST_FAILED" });
   if (!csrf || state !== csrf) return popup(origin, { error: "The sign-in did not start from this site, or took too long. Try again.", errorCode: "CSRF_DETECTED" });
   const app = await readApp(env);
@@ -278,7 +304,7 @@ async function callback(request, env, url) {
     const res = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
       headers: { accept: "application/json", "content-type": "application/json", "user-agent": UA },
-      body: JSON.stringify({ code, client_id: app.client_id, client_secret: app.client_secret, redirect_uri: `${origin}/callback` }),
+      body: JSON.stringify({ code, client_id: app.client_id, client_secret: app.client_secret, redirect_uri: `${url.origin}/callback` }),
     });
     const data = await res.json();
     token = data.access_token || "";
@@ -287,6 +313,8 @@ async function callback(request, env, url) {
     return popup(origin, { error: "Could not reach GitHub for a token. Try again later.", errorCode: "TOKEN_REQUEST_FAILED" });
   }
   if (!token) return popup(origin, { error: error || "GitHub gave no token.", errorCode: "TOKEN_REQUEST_FAILED" });
+  // An app set up before home was kept: GitHub just accepted this address, so it is home.
+  if (!app.home) await env.BOOKS.put(APP_KEY, JSON.stringify({ ...app, home: url.origin }));
   return popup(origin, { token });
 }
 
@@ -302,7 +330,8 @@ async function installed(env, url) {
 
 async function status(env) {
   const app = await readApp(env);
-  return new Response(JSON.stringify({ ready: isReady(app), created: !!app }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+  // home: where sign-in happens (see start()); the editor accepts its answer from there too.
+  return new Response(JSON.stringify({ ready: isReady(app), created: !!app, ...(app?.home ? { home: app.home } : {}) }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
 }
 
 export { readApp };

@@ -154,7 +154,8 @@ test("/auth/setup/done keeps the new app's keys, marked not installed until GitH
     const app = JSON.parse(env.kv.get("auth:app"));
     assert.equal(app.client_id, "Iv1.x");
     assert.equal(app.installed, false);
-    assert.deepEqual(await (await run(env, "/auth/status")).json(), { ready: false, created: true });
+    assert.equal(app.home, ORIGIN, "the address GitHub will send people back to");
+    assert.deepEqual(await (await run(env, "/auth/status")).json(), { ready: false, created: true, home: ORIGIN });
   } finally {
     globalThis.fetch = saved;
   }
@@ -167,4 +168,69 @@ test("/auth/setup after creating but not installing goes straight to the install
   assert.ok(body.includes("Step 2 of 2"));
   assert.ok(body.includes('href="https://github.com/apps/asha-site-sign-in/installations/new"'));
   assert.ok(!body.includes("settings/apps/new"));
+});
+
+// The same site on its own domain: GitHub only knows the app's home address.
+const DOMAIN = "https://asharao.com";
+const at = (origin, env, path, headers = {}) => auth(new Request(`${origin}${path}`, { headers }), env, new URL(`${origin}${path}`));
+const withGitHub = async (token, fn) => {
+  const saved = globalThis.fetch;
+  const asked = [];
+  globalThis.fetch = async (url, init) => { asked.push([String(url), JSON.parse(init.body)]); return new Response(JSON.stringify(token ? { access_token: token } : { error: "bad_verification_code" })); };
+  try { return await fn(asked); } finally { globalThis.fetch = saved; }
+};
+
+test("on its own domain, the editor signs in at the app's home address and gets its token back there", async () => {
+  const env = fakeEnv({ app: { client_id: "Iv1.abc", client_secret: "s3cret", slug: "asha-site-sign-in", owner: "asha", home: ORIGIN } });
+  // 1. The domain sends the window home, with its address signed.
+  const first = await at(DOMAIN, env, "/auth?provider=github");
+  assert.equal(first.status, 302);
+  const home = new URL(first.headers.get("location"));
+  assert.equal(home.origin + home.pathname, `${ORIGIN}/auth`);
+  assert.equal(home.searchParams.get("for"), DOMAIN);
+  // 2. Home checks the signature and goes to GitHub with its own callback, remembering the domain.
+  const second = await at(ORIGIN, env, `/auth?${home.searchParams}`);
+  const gh = new URL(second.headers.get("location"));
+  assert.equal(gh.searchParams.get("redirect_uri"), `${ORIGIN}/callback`);
+  const state = gh.searchParams.get("state");
+  const csrf = cookieOf(second, "csrf-token");
+  assert.match(csrf, new RegExp(`^github_${state}\\.`));
+  // 3. GitHub comes back home; the token goes to the domain's editor, and to nobody else.
+  await withGitHub("gho_tok", async (asked) => {
+    const done = await (await at(ORIGIN, env, `/callback?code=c&state=${state}`, { cookie: `csrf-token=${csrf}` })).text();
+    assert.ok(done.includes(JSON.stringify(DOMAIN)), "posted to the domain");
+    assert.ok(done.includes("gho_tok"));
+    assert.equal(asked[0][1].redirect_uri, `${ORIGIN}/callback`);
+  });
+  // A made-up address, or one with someone else's signature, gets nothing.
+  for (const q of [`for=${encodeURIComponent("https://evil.example")}&sig=x`, `for=${encodeURIComponent("javascript:alert(1)")}&sig=x`]) {
+    const res = await at(ORIGIN, env, `/auth?provider=github&${q}`);
+    assert.ok((await res.text()).includes("CSRF_DETECTED"));
+  }
+  assert.deepEqual(await (await at(DOMAIN, env, "/auth/status")).json(), { ready: true, created: true, home: ORIGIN }, "the editor learns where sign-in happens");
+  // Asking for its own address is just a normal sign-in.
+  const plain = await at(ORIGIN, env, `/auth?provider=github&for=${encodeURIComponent(ORIGIN)}`);
+  assert.match(cookieOf(plain, "csrf-token"), /^github_\w+$/);
+  // A cookie whose address can't be read: the answer stays at home.
+  await withGitHub("gho_tok", async () => {
+    const odd = await (await at(ORIGIN, env, "/callback?code=c&state=zz", { cookie: "csrf-token=github_zz.%%%" })).text();
+    assert.ok(odd.includes(JSON.stringify(ORIGIN)));
+  });
+});
+
+test("an app set up before its home address was kept learns it from its first sign-in", async () => {
+  const env = fakeEnv({ app: { client_id: "Iv1.abc", client_secret: "s", slug: "asha-site-sign-in", owner: "asha" } });
+  const res = await run(env, "/auth?provider=github");
+  const state = new URL(res.headers.get("location")).searchParams.get("state");
+  await withGitHub("gho_tok", async () => {
+    await run(env, `/callback?code=c&state=${state}`, { cookie: `csrf-token=github_${state}` });
+  });
+  assert.equal(JSON.parse(env.kv.get("auth:app")).home, ORIGIN);
+  // A failed sign-in teaches it nothing.
+  const env2 = fakeEnv({ app: { client_id: "Iv1.abc", client_secret: "s", slug: "x", owner: "asha" } });
+  await withGitHub("", async () => {
+    const t = await (await run(env2, "/callback?code=c&state=q", { cookie: "csrf-token=github_q" })).text();
+    assert.ok(t.includes("TOKEN_REQUEST_FAILED"));
+  });
+  assert.equal(JSON.parse(env2.kv.get("auth:app")).home, undefined);
 });

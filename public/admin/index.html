@@ -14,8 +14,9 @@
 <div id="app"></div>
 <script type="module">
   // The site's editor (alt-pages-editor): forms from /admin/config.yml, sign-in through this
-  // site's own Worker (/auth), saving to the site's GitHub repository. editor.js and editor.css
-  // are its build (npm run bundle there), copied here.
+  // site's own Worker (/auth), saving to the site's GitHub repository. editor.js, editor.css,
+  // editor-pdf.js and editor-pdf-worker.js (the LinkedIn PDF reader, loaded only when used) are its
+  // build (npm run bundle there), copied here. Keep the import below without a query string.
   import { start } from "/admin/editor.js";
   // A demo site (built with DEMO_EDITOR=1) opens the editor on its own sample content, so anyone can
   // try it and nothing is saved anywhere. Real sites have no demo.js.
