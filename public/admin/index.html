@@ -17,7 +17,11 @@
   // site's own Worker (/auth), saving to the site's GitHub repository. editor.js and editor.css
   // are its build (npm run bundle there), copied here.
   import { start } from "/admin/editor.js";
-  start(document.getElementById("app"));
+  // A demo site (built with DEMO_EDITOR=1) opens the editor on its own sample content, so anyone can
+  // try it and nothing is saved anywhere. Real sites have no demo.js.
+  let demoFiles = null;
+  try { demoFiles = (await import("/admin/demo.js")).default; } catch { /* a real site */ }
+  start(document.getElementById("app"), demoFiles ? { demoFiles } : {});
 </script>
 </body>
 </html>
